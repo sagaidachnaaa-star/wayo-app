@@ -94,7 +94,7 @@ export default function Onboarding() {
               className="flex h-full flex-col items-center px-5 text-center"
               style={{ width: `${100 / slides.length}%` }}
             >
-              <div className="mt-10 flex h-[240px] w-full items-center justify-center">
+              <div className="mt-10 flex h-60 w-full items-center justify-center">
                 <img src={slide.image} alt="" className="max-h-full w-full object-contain" draggable="false" />
               </div>
               <div className="mt-5 flex flex-col items-center">
@@ -103,10 +103,10 @@ export default function Onboarding() {
                     {slide.eyebrow}
                   </p>
                 )}
-                <h1 className="max-w-[300px] text-[28px] font-extrabold leading-[1.15] text-[#303030]">
+                <h1 className="max-w-75 text-[28px] font-extrabold leading-[1.15] text-[#303030]">
                   {slide.title}
                 </h1>
-                <p className="mt-4 max-w-[300px] text-[15px] font-medium leading-[1.55] text-[#706D68]">
+                <p className="mt-4 max-w-75 text-[15px] font-medium leading-[1.55] text-[#706D68]">
                   {slide.description}
                 </p>
               </div>
@@ -138,13 +138,13 @@ export default function Onboarding() {
       <button
         type="button"
         onClick={handleNext}
-        className="mx-5 mb-8 flex h-[60px] w-[calc(100%-40px)] items-center justify-center rounded-[16px] bg-[#15A963] text-[17px] font-bold tracking-[0.03em] text-white"
+        className="mx-5 mb-8 flex h-15 w-[calc(100%-40px)] items-center justify-center rounded-2xl bg-[#15A963] text-[17px] font-bold tracking-[0.03em] text-white"
       >
         {slides[currentSlide].button}
         <span className="ml-3 text-[22px] leading-none">→</span>
       </button>
 
-      <div className="absolute bottom-[12px] left-1/2 h-[5px] w-[134px] -translate-x-1/2 rounded-full bg-black/20" />
+      <div className="absolute bottom-3 left-1/2 h-1.25 w-33.5 -translate-x-1/2 rounded-full bg-black/20" />
     </main>
   );
 }

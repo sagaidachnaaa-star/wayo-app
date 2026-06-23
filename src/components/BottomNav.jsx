@@ -43,13 +43,13 @@ const items = [
 export default function BottomNav() {
   return (
     <div className="shrink-0 px-4 pb-4 pt-2 bg-transparent">
-      <nav className="flex h-[70px] items-center justify-around rounded-full bg-white px-2 shadow-[0_8px_28px_rgba(47,47,47,0.13)]">
+      <nav className="flex h-17.5 items-center justify-around rounded-full bg-white px-2 shadow-[0_8px_28px_rgba(47,47,47,0.13)]">
         {items.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              ["flex min-w-[68px] flex-col items-center gap-[3px] text-[11px] font-medium",
+              ["flex min-w-17 flex-col items-center gap-0.75 text-[11px] font-medium",
                 isActive ? "text-[#15A963]" : "text-[#8A857D]"].join(" ")
             }
           >

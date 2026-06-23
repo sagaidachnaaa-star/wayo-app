@@ -1,20 +1,20 @@
 export default function IPhoneStatusBar({ background = "#F8F7F4" }) {
   return (
     <div
-      className="pointer-events-none absolute left-0 top-0 z-50 h-[58px] w-full"
+      className="pointer-events-none absolute left-0 top-0 z-50 h-14.5 w-full"
       style={{ backgroundColor: background }}
       aria-hidden="true"
     >
       {/* Time */}
-      <div className="absolute left-[36px] top-[17px] text-[17px] font-semibold leading-none text-black">
+      <div className="absolute left-9 top-4.25 text-[17px] font-semibold leading-none text-black">
         9:41
       </div>
 
       {/* Dynamic Island */}
-      <div className="absolute left-1/2 top-[10px] h-[37px] w-[126px] -translate-x-1/2 rounded-full bg-black" />
+      <div className="absolute left-1/2 top-2.5 h-9.25 w-31.5 -translate-x-1/2 rounded-full bg-black" />
 
       {/* Right icons */}
-      <div className="absolute right-[28px] top-[16px] flex items-center gap-[8px]">
+      <div className="absolute right-7 top-4 items-center gap-2">
         <SignalIcon />
         <WifiIcon />
         <BatteryIcon />
@@ -25,11 +25,11 @@ export default function IPhoneStatusBar({ background = "#F8F7F4" }) {
 
 function SignalIcon() {
   return (
-    <div className="flex h-[16px] items-end gap-[2px]">
-      <span className="h-[5px] w-[3px] rounded-sm bg-black" />
-      <span className="h-[8px] w-[3px] rounded-sm bg-black" />
-      <span className="h-[11px] w-[3px] rounded-sm bg-black" />
-      <span className="h-[14px] w-[3px] rounded-sm bg-black" />
+    <div className="flex h-4 items-end gap-0.5">
+      <span className="h-1.25 w-0.75 rounded-sm bg-black" />
+      <span className="h-2 w-0.75rounded-sm bg-black" />
+      <span className="h-2.75 w-0.75 rounded-sm bg-black" />
+      <span className="h-3.5 w-0.75 rounded-sm bg-black" />
     </div>
   );
 }

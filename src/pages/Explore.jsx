@@ -51,8 +51,8 @@ function LocationArrow() {
 }
 
 // ── Difficulty badge shapes ───────────────────────────────────────────────────
-function EasyDot()     { return <span className="h-[13px] w-[13px] rounded-full bg-[#15A963] shrink-0" />; }
-function ModerateDot() { return <span className="h-[11px] w-[11px] rounded-[2px] bg-[#F6CA5D] shrink-0" />; }
+function EasyDot()     { return <span className="h-3.25 w-3.25 rounded-full bg-[#15A963] shrink-0" />; }
+function ModerateDot() { return <span className="h-2.75 w-2.75 rounded-xs bg-[#F6CA5D] shrink-0" />; }
 function ToughDot()    {
   return (
     <span className="shrink-0 h-0 w-0" style={{ borderLeft:"7px solid transparent", borderRight:"7px solid transparent", borderBottom:"13px solid #D44A08" }} />
@@ -72,7 +72,7 @@ function Sheet({ onClose, children }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
       <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-white">
         <div className="flex justify-center pt-3 pb-2">
-          <div className="h-[5px] w-[44px] rounded-full bg-[#D5D2CC]" />
+          <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
         </div>
         {children}
       </div>
@@ -87,7 +87,7 @@ function FilterPill({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       className={[
-        "flex h-[42px] shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
+        "flex h-10.5 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
         active ? "border-[#15A963] bg-[#E7F5EF] text-[#2F2F2F]" : "border-[#E5E3DC] bg-white text-[#2F2F2F]",
       ].join(" ")}
     >
@@ -105,7 +105,7 @@ function RangeSlider({ label, min, max, unit, value, onChange }) {
         <p className="text-[15px] font-semibold text-[#2F2F2F]">{label}</p>
         <p className="text-[13px] text-[#8A857D]">{min}-{value} {unit}</p>
       </div>
-      <div className="relative mt-3 h-[4px] rounded-full bg-[#E5E3DC]">
+      <div className="relative mt-3 h-1 rounded-full bg-[#E5E3DC]">
         <div className="absolute left-0 top-0 h-full rounded-full bg-[#15A963]" style={{ width: `${pct}%` }} />
         <input
           type="range"
@@ -118,7 +118,7 @@ function RangeSlider({ label, min, max, unit, value, onChange }) {
         />
         {/* thumb */}
         <div
-          className="pointer-events-none absolute top-1/2 h-[26px] w-[26px] -translate-y-1/2 -translate-x-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+          className="pointer-events-none absolute top-1/2 h-6.5 w-6.5 -translate-y-1/2 -translate-x-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
           style={{ left: `${pct}%` }}
         />
       </div>
@@ -144,7 +144,7 @@ function DifficultySheet({ selected, onChange, onClose, count }) {
         <button
           type="button"
           onClick={onClose}
-          className="mt-5 flex h-[54px] w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white"
+          className="mt-5 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white"
         >
           See {count} quest{count !== 1 ? "s" : ""}
         </button>
@@ -160,7 +160,7 @@ function DurationSheet({ value, onChange, onClose, count }) {
       <div className="px-5 pb-6">
         <h2 className="text-[20px] font-bold text-[#2F2F2F]">Duration</h2>
         <RangeSlider label="" min={0} max={120} unit="min" value={value} onChange={onChange} />
-        <button type="button" onClick={onClose} className="mt-6 flex h-[54px] w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
+        <button type="button" onClick={onClose} className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
           See {count} quest{count !== 1 ? "s" : ""}
         </button>
       </div>
@@ -175,7 +175,7 @@ function DistanceSheet({ value, onChange, onClose, count }) {
       <div className="px-5 pb-6">
         <h2 className="text-[20px] font-bold text-[#2F2F2F]">Distance</h2>
         <RangeSlider label="" min={0} max={15} unit="km" value={value} onChange={onChange} />
-        <button type="button" onClick={onClose} className="mt-6 flex h-[54px] w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
+        <button type="button" onClick={onClose} className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
           See {count} quest{count !== 1 ? "s" : ""}
         </button>
       </div>
@@ -202,7 +202,7 @@ function SortSheet({ selected, onChange, onClose }) {
               type="button"
               onClick={() => { onChange(o.label); onClose(); }}
               className={[
-                "flex h-[52px] w-full items-center rounded-full px-5 text-[15px] font-medium",
+                "flex h-13 w-full items-center rounded-full px-5 text-[15px] font-medium",
                 selected === o.label ? "bg-[#E7F5EF] text-[#2F2F2F]" : "bg-[#F4F2EE] text-[#2F2F2F]",
               ].join(" ")}
             >
@@ -238,9 +238,9 @@ function FiltersSheet({ onClose, filteredCount }) {
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
       <div className="absolute bottom-0 left-0 right-0 z-50 flex max-h-[88%] flex-col rounded-t-[28px] bg-white">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="h-[5px] w-[44px] rounded-full bg-[#D5D2CC]" />
+          <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-none [&::-webkit-scrollbar]:hidden">
           <h2 className="mt-1 text-[22px] font-bold text-[#2F2F2F]">Filters</h2>
 
           {/* Difficulty */}
@@ -295,10 +295,10 @@ function FiltersSheet({ onClose, filteredCount }) {
         </div>
 
         <div className="flex gap-3 border-t border-[#EDECE6] px-5 py-4 shrink-0">
-          <button type="button" onClick={onClose} className="flex h-[54px] flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]">
+          <button type="button" onClick={onClose} className="flex h-13.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]">
             Clear all
           </button>
-          <button type="button" onClick={onClose} className="flex h-[54px] flex-[2] items-center justify-center rounded-full bg-[#15A963] text-[15px] font-semibold text-white">
+          <button type="button" onClick={onClose} className="flex h-13.5 flex-2 items-center justify-center rounded-full bg-[#15A963] text-[15px] font-semibold text-white">
             See {filteredCount} quest{filteredCount !== 1 ? "s" : ""}
           </button>
         </div>
@@ -311,7 +311,7 @@ function FiltersSheet({ onClose, filteredCount }) {
 function SearchExpanded({ query, setQuery, onClose }) {
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-[#F8F7F4] px-4 pt-4">
-      <div className="flex h-[54px] items-center gap-3 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(47,47,47,0.07)]">
+      <div className="flex h-13.5 items-center gap-3 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(47,47,47,0.07)]">
         <button type="button" onClick={onClose}><BackIcon /></button>
         <input
           autoFocus
@@ -321,8 +321,8 @@ function SearchExpanded({ query, setQuery, onClose }) {
           className="flex-1 bg-transparent text-[16px] font-medium text-[#2F2F2F] outline-none placeholder:text-[#A7A39D]"
         />
       </div>
-      <div className="mt-3 flex items-center gap-4 rounded-[16px] bg-white p-4 shadow-[0_4px_14px_rgba(47,47,47,0.06)]">
-        <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[12px] bg-[#F0FBF5]">
+      <div className="mt-3 flex items-center gap-4 rounded-2xl bg-white p-4 shadow-[0_4px_14px_rgba(47,47,47,0.06)]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0FBF5]">
           <LocationArrow />
         </div>
         <div>
@@ -361,13 +361,13 @@ export default function Explore() {
 
   return (
     <main className="relative h-full bg-[#F8F7F4] text-[#2F2F2F]">
-      <div className="h-full overflow-y-auto px-4 pb-[24px] pt-4">
+      <div className="h-full overflow-y-auto px-4 pb-6 pt-4">
 
         {/* Search bar */}
         <button
           type="button"
           onClick={() => setIsSearchOpen(true)}
-          className="flex h-[52px] w-full items-center gap-3 rounded-full bg-white px-5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] text-left"
+          className="flex h-13 w-full items-center gap-3 rounded-full bg-white px-5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] text-left"
         >
           <SearchIcon />
           <span className="text-[15px] font-medium text-[#A7A39D]">Where will you explore next?</span>
@@ -375,12 +375,12 @@ export default function Explore() {
 
         {/* Chips — extend edge to edge so scroll works */}
         <div className="-mx-4 mt-4">
-        <div className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none [&::-webkit-scrollbar]:hidden">
           {/* All */}
           <button
             type="button"
             onClick={() => setIsFiltersOpen(true)}
-            className="flex h-[42px] shrink-0 items-center gap-2 rounded-full bg-[#15A963] px-4 text-[14px] font-semibold text-white"
+            className="flex h-10.5 shrink-0 items-center gap-2 rounded-full bg-[#15A963] px-4 text-[14px] font-semibold text-white"
           >
             <FilterIcon />All
           </button>
@@ -389,7 +389,7 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsDiffOpen(true)}
-            className={["flex h-[42px] shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
               difficulty !== "All" ? "bg-[#E7F5EF] text-[#2F2F2F]" : "bg-[#F4F2EE] text-[#2F2F2F]"].join(" ")}
           >
             {difficulty !== "All" && <DifficultyIcon label={difficulty} />}
@@ -401,7 +401,7 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsDurationOpen(true)}
-            className={["flex h-[42px] shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
               duration < 120 ? "bg-[#E7F5EF]" : "bg-[#F4F2EE]"].join(" ")}
           >
             {duration < 120 ? `0-${duration} min` : "Duration"}
@@ -412,7 +412,7 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsDistanceOpen(true)}
-            className={["flex h-[42px] shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
               distance < 15 ? "bg-[#E7F5EF]" : "bg-[#F4F2EE]"].join(" ")}
           >
             {distance < 15 ? `0-${distance} km` : "Distance"}
@@ -423,7 +423,7 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsFiltersOpen(true)}
-            className="flex h-[42px] shrink-0 items-center gap-2 rounded-full bg-[#F4F2EE] px-4 text-[14px] font-medium text-[#2F2F2F]"
+            className="flex h-10.5 shrink-0 items-center gap-2 rounded-full bg-[#F4F2EE] px-4 text-[14px] font-medium text-[#2F2F2F]"
           >
             Features <ChevronDown />
           </button>
@@ -454,7 +454,7 @@ export default function Explore() {
       {!anySheetOpen && !isSearchOpen && (
         <Link
           to="/map"
-          className="absolute bottom-[16px] right-4 z-30 flex h-[66px] w-[66px] flex-col items-center justify-center gap-[2px] rounded-full bg-[#252525] text-[12px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
+          className="absolute bottom-4 right-4 z-30 flex h-16.5 w-16.5 flex-col items-center justify-center gap-0.5 rounded-full bg-[#252525] text-[12px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
         >
           <MapFabIcon />
           <span>Map</span>

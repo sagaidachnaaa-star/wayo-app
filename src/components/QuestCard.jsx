@@ -47,12 +47,12 @@ export default function QuestCard({ quest, variant = "compact" }) {
         <img
           src={quest.image}
           alt={quest.title}
-          className={["w-full object-cover", isFeatured ? "h-[200px]" : "h-[160px]"].join(" ")}
+          className={["w-full object-cover", isFeatured ? "h-50" : "h-40"].join(" ")}
         />
 
         {/* Daily Quest badge */}
         {quest.isDaily && (
-          <div className="absolute left-3 top-3 flex items-center gap-[6px] rounded-full bg-[#15A963] px-3 py-[6px] text-[12px] font-bold uppercase tracking-[0.6px] text-white">
+          <div className="absolute left-3 top-3 flex items-center gap-1.5ounded-full bg-[#15A963] px-3 py-1.5ext-[12px] font-bold uppercase tracking-[0.6px] text-white">
             <StarIcon />
             Daily Quest
           </div>
@@ -62,7 +62,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setSaved((s) => !s); }}
-          className="absolute right-3 top-3 flex h-[44px] w-[44px] items-center justify-center rounded-full border border-white/60 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur-xl"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur-xl"
           aria-label="Save quest"
         >
           <HeartIcon filled={saved} />
@@ -75,7 +75,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
           {quest.title}
         </h2>
 
-        <div className="mt-[6px] flex items-center gap-[6px] text-[14px] text-[#6F6A62]">
+        <div className="mt-1.5 flex items-center gap-1.5 text-[14px] text-[#6F6A62]">
           <LocationIcon />
           <span>{quest.location}</span>
         </div>
@@ -84,12 +84,12 @@ export default function QuestCard({ quest, variant = "compact" }) {
           {quest.description}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-[6px] gap-y-1 text-[13px] font-medium text-[#6F6A62]">
+        <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] font-medium text-[#6F6A62]">
           {quest.difficulty === "Easy" && (
-            <span className="h-[11px] w-[11px] shrink-0 rounded-full bg-[#15A963]" />
+            <span className="h-2.75 w-2.75 shrink-0 rounded-full bg-[#15A963]" />
           )}
           {quest.difficulty === "Moderate" && (
-            <span className="h-[10px] w-[10px] shrink-0 rounded-[2px] bg-[#F6CA5D]" />
+            <span className="h-2.5 w-2.5 shrink-0 rourounded-xs-[#F6CA5D]" />
           )}
           {quest.difficulty === "Tough" && (
             <span className="shrink-0 h-0 w-0" style={{ borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:"11px solid #D44A08" }} />
@@ -107,7 +107,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); navigate(`/quest/${quest.id}`); }}
-            className="mt-4 flex h-[52px] w-full items-center justify-center rounded-[14px] bg-[#15A963] text-[16px] font-bold text-white"
+            className="mt-4 flex h-13 w-full items-center justify-center rounded-[14px] bg-[#15A963] text-[16px] font-bold text-white"
           >
             Explore
           </button>

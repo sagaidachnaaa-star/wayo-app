@@ -17,9 +17,9 @@ import Settings from "./pages/Settings";
 function StatusBar() {
   return (
     <div className="relative flex shrink-0 items-center justify-between px-6 pt-3 pb-1 text-[15px] font-semibold" style={{ color: "#1a1a1a", height: 52 }}>
-      <div className="absolute left-1/2 top-2 z-[60] h-[34px] w-[120px] -translate-x-1/2 rounded-full bg-black" />
+      <div className="absolute left-1/2 top-2 z-60 h-8.5 w-30 -translate-x-1/2 rounded-full bg-black" />
       <span className="z-20" style={{ letterSpacing: "-0.3px" }}>9:41</span>
-      <div className="z-20 flex items-center gap-[6px]">
+      <div className="z-20 flex items-center gap-1.5">
         <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor">
           <rect x="0"    y="9" width="3" height="3"  rx="1"/>
           <rect x="4.5"  y="6" width="3" height="6"  rx="1"/>
@@ -32,10 +32,10 @@ function StatusBar() {
           <path d="M2 5a8.4 8.4 0 0 1 12 0l1.4-1.4a10.4 10.4 0 0 0-14.8 0z"/>
         </svg>
         <div className="relative flex items-center">
-          <div className="flex h-[12px] w-[25px] items-center rounded-[3px] border-[1.5px] border-black px-[2px]">
-            <div className="h-[7px] w-full rounded-[1.5px] bg-black"/>
+          <div className="flex h-3 w-6.25 items-center rounded-[3px] border-[1.5px] border-black px-0.5">
+            <div className="h-1.75 w-full rounded-[1.5px] bg-black"/>
           </div>
-          <div className="absolute -right-[3px] top-1/2 h-[5px] w-[2px] -translate-y-1/2 rounded-r-[2px] bg-black"/>
+          <div className="absolute -right-0.75 top-1/2 h-1.25 w-0.5 -translate-y-1/2 rounded-r-xs bg-black"/>
         </div>
       </div>
     </div>
@@ -51,7 +51,7 @@ function Shell() {
 
   return (
     <div
-      className="relative flex w-[375px] flex-col overflow-hidden rounded-[48px] shadow-2xl ring-[6px] ring-gray-800"
+      className="relative flex w-93.75 flex-col overflow-hidden rounded-[48px] shadow-2xl ring-[6px] ring-gray-800"
       style={{ height: "min(812px, calc(100vh - 32px))", background: "#F8F7F4" }}
     >
       <div
