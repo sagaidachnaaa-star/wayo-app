@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
-
 import onboardingMap from "../assets/onboarding-map.svg";
 import onboardingQuest from "../assets/onboarding-quest.svg";
 import onboardingPassport from "../assets/onboarding-passport.svg";
@@ -42,19 +41,16 @@ export default function Onboarding() {
     setAnimating(true);
 
     const track = trackRef.current;
-    // кожен слайд = 100% ширини контейнера
-    // трек = slides.length * 100% контейнера
-    // тому offset = -(next * containerWidth) в пікселях
+    
     const containerWidth = track.parentElement.offsetWidth;
 
-    // спочатку — без анімації ставимо поточну позицію
     track.style.transition = "none";
     track.style.transform = `translateX(${-currentSlide * containerWidth}px)`;
 
-    // форс reflow
+   
     track.getBoundingClientRect();
 
-    // потім — з анімацією рухаємось до наступного
+
     track.style.transition = "transform 420ms cubic-bezier(0.4, 0, 0.2, 1)";
     track.style.transform = `translateX(${-next * containerWidth}px)`;
 

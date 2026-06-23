@@ -1,6 +1,10 @@
-export default function IPhoneStatusBar() {
+export default function IPhoneStatusBar({ background = "#F8F7F4" }) {
   return (
-    <div className="pointer-events-none absolute left-0 top-0 z-50 h-[58px] w-full bg-[#F8F7F4]">
+    <div
+      className="pointer-events-none absolute left-0 top-0 z-50 h-[58px] w-full"
+      style={{ backgroundColor: background }}
+      aria-hidden="true"
+    >
       {/* Time */}
       <div className="absolute left-[36px] top-[17px] text-[17px] font-semibold leading-none text-black">
         9:41
@@ -21,7 +25,7 @@ export default function IPhoneStatusBar() {
 
 function SignalIcon() {
   return (
-    <div className="flex h-[16px] items-end gap-[2px]" aria-hidden="true">
+    <div className="flex h-[16px] items-end gap-[2px]">
       <span className="h-[5px] w-[3px] rounded-sm bg-black" />
       <span className="h-[8px] w-[3px] rounded-sm bg-black" />
       <span className="h-[11px] w-[3px] rounded-sm bg-black" />
@@ -38,7 +42,6 @@ function WifiIcon() {
       viewBox="0 0 19 14"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
     >
       <path
         d="M1.5 4.4C5.9 0.9 13.1 0.9 17.5 4.4"
@@ -70,7 +73,6 @@ function BatteryIcon() {
       viewBox="0 0 28 14"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
     >
       <rect
         x="1"

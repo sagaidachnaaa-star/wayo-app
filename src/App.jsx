@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
-import { Routes, Route, Link, useLocation } from "react-router";
+import { Routes, Route, useLocation } from "react-router";
+import BottomNav from "./components/BottomNav";
 import { SplashOverlayContext } from "./context/SplashContext";
-
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Explore from "./pages/Explore";
@@ -14,18 +14,10 @@ import QuestComplete from "./pages/QuestComplete";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 
-
-function StatusBar({ dark = false }) {
-  const color = dark ? "white" : "#1a1a1a";
+function StatusBar() {
   return (
-    <div
-      className="relative flex shrink-0 items-center justify-between px-6 pt-3 pb-1 text-[15px] font-semibold"
-      style={{ color, height: 52 }}
-    >
-      <div
-        className="absolute left-1/2 top-2 z-[60] h-[34px] w-[120px] -translate-x-1/2 rounded-full"
-        style={{ background: "black" }}
-      />
+    <div className="relative flex shrink-0 items-center justify-between px-6 pt-3 pb-1 text-[15px] font-semibold" style={{ color: "#1a1a1a", height: 52 }}>
+      <div className="absolute left-1/2 top-2 z-[60] h-[34px] w-[120px] -translate-x-1/2 rounded-full bg-black" />
       <span className="z-20" style={{ letterSpacing: "-0.3px" }}>9:41</span>
       <div className="z-20 flex items-center gap-[6px]">
         <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor">
@@ -40,13 +32,10 @@ function StatusBar({ dark = false }) {
           <path d="M2 5a8.4 8.4 0 0 1 12 0l1.4-1.4a10.4 10.4 0 0 0-14.8 0z"/>
         </svg>
         <div className="relative flex items-center">
-          <div
-            className="flex h-[12px] w-[25px] items-center rounded-[3px] border-[1.5px] px-[2px]"
-            style={{ borderColor: color }}
-          >
-            <div className="h-[7px] w-full rounded-[1.5px]" style={{ background: color }}/>
+          <div className="flex h-[12px] w-[25px] items-center rounded-[3px] border-[1.5px] border-black px-[2px]">
+            <div className="h-[7px] w-full rounded-[1.5px] bg-black"/>
           </div>
-          <div className="absolute -right-[3px] top-1/2 h-[5px] w-[2px] -translate-y-1/2 rounded-r-[2px]" style={{ background: color }}/>
+          <div className="absolute -right-[3px] top-1/2 h-[5px] w-[2px] -translate-y-1/2 rounded-r-[2px] bg-black"/>
         </div>
       </div>
     </div>
@@ -65,7 +54,6 @@ function Shell() {
       className="relative flex w-[375px] flex-col overflow-hidden rounded-[48px] shadow-2xl ring-[6px] ring-gray-800"
       style={{ height: "min(812px, calc(100vh - 32px))", background: "#F8F7F4" }}
     >
-      {/* Full-screen green overlay — covers status bar too */}
       <div
         className="pointer-events-none absolute inset-0 z-50 rounded-[42px]"
         style={{
@@ -79,28 +67,21 @@ function Shell() {
 
       <div className="relative flex-1 overflow-hidden">
         <Routes>
-          <Route path="/"                    element={<Splash />} />
-          <Route path="/onboarding"          element={<Onboarding />} />
-          <Route path="/explore"             element={<Explore />} />
-          <Route path="/map"                 element={<Map />} />
-          <Route path="/saved"               element={<Saved />} />
-          <Route path="/passport"            element={<Passport />} />
-          <Route path="/quest/:id"           element={<QuestDetail />} />
-          <Route path="/quest/:id/active"    element={<QuestActive />} />
-          <Route path="/quest/:id/complete"  element={<QuestComplete />} />
-          <Route path="/profile"             element={<Profile />} />
-          <Route path="/profile/settings"    element={<Settings />} />
+          <Route path="/" element={<Splash />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/map" element={<Map />} />
+          <Route path="/saved" element={<Saved />} />
+          <Route path="/passport" element={<Passport />} />
+          <Route path="/quest/:id" element={<QuestDetail />} />
+          <Route path="/quest/:id/active" element={<QuestActive />} />
+          <Route path="/quest/:id/complete" element={<QuestComplete />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/settings" element={<Settings />} />
         </Routes>
       </div>
 
-      {!hideNav && (
-        <nav className="flex shrink-0 justify-around border-t border-white/10 bg-[#101511] px-4 py-3 text-sm text-white">
-          <Link to="/explore">Explore</Link>
-          <Link to="/map">Map</Link>
-          <Link to="/saved">Saved</Link>
-          <Link to="/passport">Passport</Link>
-        </nav>
-      )}
+      {!hideNav && <BottomNav />}
     </div>
   );
 }

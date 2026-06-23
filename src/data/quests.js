@@ -1,0 +1,73 @@
+import greenwichStroll from "../assets/greenwich-stroll.svg";
+import kyotoGardenEscape from "../assets/kyoto-garden-escape.svg";
+import thamesTrail from "../assets/thames-trail.svg";
+import southbank from "../assets/southbank.svg";
+import greenEscape from "../assets/green-escape.svg";
+
+export const quests = [
+  {
+    id: "greenwich-stroll",
+    title: "Greenwich Stroll",
+    location: "Greenwich, London",
+    description: "A story-led walk through Royal Greenwich",
+    difficulty: "Moderate",
+    duration: "1h 30 min",
+    distance: "4.0 km",
+    accessibility: "Step-free",
+    image: greenwichStroll,
+    isDaily: true,
+    isSaved: false,
+  },
+  {
+    id: "kyoto-garden-escape",
+    title: "Kyoto Garden Escape",
+    location: "Holland Park, Kensington",
+    description: "Find a calm Japanese garden hidden in the city.",
+    difficulty: "Easy",
+    duration: "45 min",
+    distance: "1.8 km",
+    accessibility: "Step-free",
+    image: kyotoGardenEscape,
+    isDaily: false,
+    isSaved: false,
+  },
+  {
+    id: "thames-time-trail",
+    title: "Thames Time Trail",
+    location: "Tower Bridge / London Bridge",
+    description: "Discover London’s old and modern landmarks.",
+    difficulty: "Tough",
+    duration: "1h 40 min",
+    distance: "4.5 km",
+    accessibility: "Mostly flat",
+    image: thamesTrail,
+    isDaily: false,
+    isSaved: false,
+  },
+  {
+    id: "quiet-corners-southbank",
+    title: "Quiet Corners of Southbank",
+    location: "Southbank",
+    description: "Explore calm riverside spots and hidden viewpoints.",
+    difficulty: "Easy",
+    duration: "35 min",
+    distance: "1.8 km",
+    accessibility: "Step-free",
+    image: southbank,
+    isDaily: false,
+    isSaved: false,
+  },
+  {
+    id: "green-escape-city",
+    title: "Green Escape in the City",
+    location: "St James’s Park",
+    description: "Find peaceful nature spots and scenic views.",
+    difficulty: "Easy",
+    duration: "30 min",
+    distance: "1.5 km",
+    accessibility: "Step-free",
+    image: greenEscape,
+    isDaily: false,
+    isSaved: false,
+  },
+];
