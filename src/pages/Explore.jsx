@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useMemo, useRef, useState } from "react";
 import QuestCard from "../components/QuestCard";
+import QuestMapView from "../components/QuestMapView";
 import { quests } from "../data/quests";
 
 // ── Icons ────────────────────────────────────────────────────────────────────
@@ -63,6 +63,35 @@ function DifficultyIcon({ label }) {
   if (label === "Moderate") return <ModerateDot />;
   if (label === "Tough")    return <ToughDot />;
   return null;
+}
+
+// ── Drag-to-scroll (lets mouse users pan the chip row, not just touch) ────────
+function useDragScroll() {
+  const ref = useRef(null);
+  const drag = useRef({ active: false, startX: 0, scrollLeft: 0, moved: false });
+
+  function onMouseDown(e) {
+    const el = ref.current;
+    drag.current = { active: true, startX: e.pageX, scrollLeft: el.scrollLeft, moved: false };
+  }
+  function onMouseMove(e) {
+    if (!drag.current.active) return;
+    const dx = e.pageX - drag.current.startX;
+    if (Math.abs(dx) > 3) drag.current.moved = true;
+    ref.current.scrollLeft = drag.current.scrollLeft - dx;
+  }
+  function endDrag() {
+    drag.current.active = false;
+  }
+  function onClickCapture(e) {
+    if (drag.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      drag.current.moved = false;
+    }
+  }
+
+  return { ref, onMouseDown, onMouseMove, onMouseUp: endDrag, onMouseLeave: endDrag, onClickCapture };
 }
 
 // ── Sheet wrapper ─────────────────────────────────────────────────────────────
@@ -334,6 +363,12 @@ function SearchExpanded({ query, setQuery, onClose }) {
   );
 }
 
+// ── Peek-map drag sheet (the whole Explore body IS the sheet; dragging or
+// tapping it down reveals a persistent map behind it — one shared quest list,
+// not a separate map screen) ──────────────────────────────────────────────────
+const PEEK_RATIO = 0.45; // fraction of the page height the map takes up when peeking
+const DRAG_TAP_THRESHOLD_PX = 4;
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Explore() {
   const [query, setQuery]           = useState("");
@@ -349,6 +384,57 @@ export default function Explore() {
   const [isDistanceOpen, setIsDistanceOpen] = useState(false);
   const [isSortOpen, setIsSortOpen]         = useState(false);
 
+  // Peek-map sheet: sheetTop is the distance (px) the sheet's top edge sits
+  // from the top of the page. 0 = full list, covering the map entirely.
+  const containerRef = useRef(null);
+  const [sheetTop, setSheetTopState] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [mapActivated, setMapActivated] = useState(false);
+  const sheetTopRef = useRef(0);
+  const draggingRef = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartTop = useRef(0);
+  const dragMoved = useRef(false);
+
+  function setSheetTop(px) {
+    sheetTopRef.current = px;
+    setSheetTopState(px);
+  }
+  function getPeekTop() {
+    return (containerRef.current?.clientHeight ?? 700) * PEEK_RATIO;
+  }
+  function openMap() {
+    setMapActivated(true);
+    setSheetTop(getPeekTop());
+  }
+
+  function handleHandlePointerDown(e) {
+    draggingRef.current = true;
+    setDragging(true);
+    dragMoved.current = false;
+    dragStartY.current = e.clientY;
+    dragStartTop.current = sheetTopRef.current;
+    setMapActivated(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  function handleHandlePointerMove(e) {
+    if (!draggingRef.current) return;
+    const delta = e.clientY - dragStartY.current;
+    if (Math.abs(delta) > DRAG_TAP_THRESHOLD_PX) dragMoved.current = true;
+    setSheetTop(Math.min(getPeekTop(), Math.max(0, dragStartTop.current + delta)));
+  }
+  function handleHandlePointerUp() {
+    if (!draggingRef.current) return;
+    draggingRef.current = false;
+    setDragging(false);
+    const peekTop = getPeekTop();
+    if (!dragMoved.current) {
+      setSheetTop(sheetTopRef.current > peekTop / 2 ? 0 : peekTop);
+      return;
+    }
+    setSheetTop(sheetTopRef.current > peekTop / 2 ? peekTop : 0);
+  }
+
   const filtered = useMemo(() => {
     return quests.filter((q) => {
       const matchDiff = difficulty === "All" || q.difficulty === difficulty;
@@ -359,9 +445,41 @@ export default function Explore() {
 
   const anySheetOpen = isFiltersOpen || isDiffOpen || isDurationOpen || isDistanceOpen || isSortOpen;
 
+  const { ref: chipRef, onMouseDown: onChipMouseDown, onMouseMove: onChipMouseMove, onMouseUp: onChipMouseUp, onMouseLeave: onChipMouseLeave, onClickCapture: onChipClickCapture } = useDragScroll();
+
   return (
-    <main className="relative h-full bg-[#F8F7F4] text-[#2F2F2F]">
-      <div className="h-full overflow-y-auto px-4 pb-6 pt-4">
+    <main ref={containerRef} className="relative h-full overflow-hidden bg-[#F8F7F4] text-[#2F2F2F]">
+
+      {/* Persistent map background, revealed as the sheet below is dragged down */}
+      <div className="absolute inset-0 z-0">
+        {mapActivated && <QuestMapView quests={filtered} active={mapActivated} />}
+      </div>
+
+      {/* Draggable sheet — this IS the Explore list; there's no separate map screen */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-20 flex flex-col overflow-hidden bg-[#F8F7F4]"
+        style={{
+          top: sheetTop,
+          borderTopLeftRadius: Math.min(28, sheetTop),
+          borderTopRightRadius: Math.min(28, sheetTop),
+          boxShadow: sheetTop > 0 ? "0 -8px 28px rgba(47,47,47,0.16)" : "none",
+          transition: dragging ? "none" : "top 260ms cubic-bezier(0.32,0.72,0,1), border-radius 260ms ease",
+        }}
+      >
+        {/* Drag handle — swipe or tap to reveal/hide the map behind */}
+        <div
+          role="button"
+          aria-label="Toggle map"
+          onPointerDown={handleHandlePointerDown}
+          onPointerMove={handleHandlePointerMove}
+          onPointerUp={handleHandlePointerUp}
+          onPointerCancel={handleHandlePointerUp}
+          className="flex shrink-0 touch-none cursor-grab justify-center bg-[#F8F7F4] pb-1.5 pt-2.5 active:cursor-grabbing"
+        >
+          <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
+        </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-6 [&::-webkit-scrollbar]:hidden">
 
         {/* Search bar */}
         <button
@@ -375,7 +493,15 @@ export default function Explore() {
 
         {/* Chips — extend edge to edge so scroll works */}
         <div className="-mx-4 mt-4">
-        <div className="flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none [&::-webkit-scrollbar]:hidden">
+        <div
+          ref={chipRef}
+          onMouseDown={onChipMouseDown}
+          onMouseMove={onChipMouseMove}
+          onMouseUp={onChipMouseUp}
+          onMouseLeave={onChipMouseLeave}
+          onClickCapture={onChipClickCapture}
+          className="flex cursor-grab gap-2 overflow-x-auto px-4 pb-1 scrollbar-none active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+        >
           {/* All */}
           <button
             type="button"
@@ -418,15 +544,6 @@ export default function Explore() {
             {distance < 15 ? `0-${distance} km` : "Distance"}
             <ChevronDown />
           </button>
-
-          {/* Features */}
-          <button
-            type="button"
-            onClick={() => setIsFiltersOpen(true)}
-            className="flex h-10.5 shrink-0 items-center gap-2 rounded-full bg-[#F4F2EE] px-4 text-[14px] font-medium text-[#2F2F2F]"
-          >
-            Features <ChevronDown />
-          </button>
         </div>
         </div>
 
@@ -449,16 +566,18 @@ export default function Explore() {
           ))}
         </section>
       </div>
+      </div>
 
-      {/* Map FAB */}
-      {!anySheetOpen && !isSearchOpen && (
-        <Link
-          to="/map"
+      {/* Map FAB — only shown while the sheet is fully covering the map; tap to peek */}
+      {!anySheetOpen && !isSearchOpen && !dragging && sheetTop < 1 && (
+        <button
+          type="button"
+          onClick={openMap}
           className="absolute bottom-4 right-4 z-30 flex h-16.5 w-16.5 flex-col items-center justify-center gap-0.5 rounded-full bg-[#252525] text-[12px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
         >
           <MapFabIcon />
           <span>Map</span>
-        </Link>
+        </button>
       )}
 
       {/* Search */}

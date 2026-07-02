@@ -1,11 +1,11 @@
-import { useContext, useState } from "react";
+import { useCallback, useContext, useState } from "react";
 import { Routes, Route, useLocation } from "react-router";
 import BottomNav from "./components/BottomNav";
 import { SplashOverlayContext } from "./context/SplashContext";
+import { SavedContext } from "./context/SavedContext";
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Explore from "./pages/Explore";
-import Map from "./pages/Map";
 import Saved from "./pages/Saved";
 import Passport from "./pages/Passport";
 import QuestDetail from "./pages/QuestDetail";
@@ -70,7 +70,6 @@ function Shell() {
           <Route path="/" element={<Splash />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/explore" element={<Explore />} />
-          <Route path="/map" element={<Map />} />
           <Route path="/saved" element={<Saved />} />
           <Route path="/passport" element={<Passport />} />
           <Route path="/quest/:id" element={<QuestDetail />} />
@@ -88,12 +87,24 @@ function Shell() {
 
 function App() {
   const [greenPhase, setGreenPhase] = useState(false);
+  const [savedMap, setSavedMap] = useState({});
+
+  const toggleSaved = useCallback((id) => {
+    setSavedMap((prev) => {
+      const next = { ...prev };
+      if (next[id]) delete next[id];
+      else next[id] = Date.now();
+      return next;
+    });
+  }, []);
 
   return (
     <SplashOverlayContext.Provider value={{ greenPhase, setGreenPhase }}>
-      <div className="flex h-screen items-center justify-center" style={{ background: "#F7F6F3" }}>
-        <Shell />
-      </div>
+      <SavedContext.Provider value={{ savedMap, toggleSaved }}>
+        <div className="flex h-screen items-center justify-center" style={{ background: "#F7F6F3" }}>
+          <Shell />
+        </div>
+      </SavedContext.Provider>
     </SplashOverlayContext.Provider>
   );
 }

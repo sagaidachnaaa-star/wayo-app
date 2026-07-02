@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useContext } from "react";
 import { useNavigate } from "react-router";
+import { SavedContext } from "../context/SavedContext";
 
 
 function LocationIcon() {
@@ -35,7 +36,8 @@ function StarIcon() {
 export default function QuestCard({ quest, variant = "compact" }) {
   const navigate = useNavigate();
   const isFeatured = variant === "featured";
-  const [saved, setSaved] = useState(quest.isSaved ?? false);
+  const { savedMap, toggleSaved } = useContext(SavedContext);
+  const saved = Boolean(savedMap[quest.id]);
 
   return (
     <article
@@ -52,7 +54,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
 
         {/* Daily Quest badge */}
         {quest.isDaily && (
-          <div className="absolute left-3 top-3 flex items-center gap-1.5ounded-full bg-[#15A963] px-3 py-1.5ext-[12px] font-bold uppercase tracking-[0.6px] text-white">
+          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-[#15A963] px-3 py-1.5 text-[12px] font-bold uppercase tracking-[0.6px] text-white">
             <StarIcon />
             Daily Quest
           </div>
@@ -61,7 +63,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
         {/* iOS glass save button */}
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); setSaved((s) => !s); }}
+          onClick={(e) => { e.stopPropagation(); toggleSaved(quest.id); }}
           className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] backdrop-blur-xl"
           aria-label="Save quest"
         >
@@ -89,7 +91,7 @@ export default function QuestCard({ quest, variant = "compact" }) {
             <span className="h-2.75 w-2.75 shrink-0 rounded-full bg-[#15A963]" />
           )}
           {quest.difficulty === "Moderate" && (
-            <span className="h-2.5 w-2.5 shrink-0 rourounded-xs-[#F6CA5D]" />
+            <span className="h-2.5 w-2.5 shrink-0 rounded-xs bg-[#F6CA5D]" />
           )}
           {quest.difficulty === "Tough" && (
             <span className="shrink-0 h-0 w-0" style={{ borderLeft:"6px solid transparent", borderRight:"6px solid transparent", borderBottom:"11px solid #D44A08" }} />
