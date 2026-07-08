@@ -32,13 +32,13 @@ export default function PrivacyPolicy() {
       <BackButton className="mt-2" />
       <h1 className="mt-6 text-[24px] font-bold">Privacy Policy</h1>
       <p className="mt-1 text-[13px] text-[#8A857D]">Last updated: July 2026</p>
-      <p className="mt-4 text-[14px] leading-[1.5] text-[#2F2F2F]">{intro}</p>
+      <p className="mt-4 text-[14px] leading-normal text-[#2F2F2F]">{intro}</p>
 
       <div className="mt-5 space-y-5">
         {sections.map((s) => (
           <div key={s.title}>
             <h2 className="text-[16px] font-bold text-[#2F2F2F]">{s.title}</h2>
-            <p className="mt-1.5 text-[14px] leading-[1.5] text-[#8A857D]">{s.body}</p>
+            <p className="mt-1.5 text-[14px] leading-normal text-[#8A857D]">{s.body}</p>
           </div>
         ))}
       </div>

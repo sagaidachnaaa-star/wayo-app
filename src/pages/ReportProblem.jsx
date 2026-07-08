@@ -26,7 +26,7 @@ export default function ReportProblem() {
             </svg>
           </div>
           <h1 className="mt-5 text-[20px] font-bold">Report submitted</h1>
-          <p className="mt-2 text-[14px] leading-[1.5] text-[#8A857D]">
+          <p className="mt-2 text-[14px] leading-normall text-[#8A857D]">
             Thanks — your feedback helps improve WAYO routes.
           </p>
 

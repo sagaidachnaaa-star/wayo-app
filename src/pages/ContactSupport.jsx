@@ -56,7 +56,7 @@ export default function ContactSupport() {
         </div>
       </div>
 
-      <p className="mt-5 text-[14px] leading-[1.5] text-[#8A857D]">
+      <p className="mt-5 text-[14px] leading-normalll text-[#8A857D]">
         For safety concerns about a specific route, please use "Report a problem" so the issue can be reviewed more clearly.
       </p>
 

@@ -367,7 +367,7 @@ export default function QuestDetail() {
           </div>
 
           {detail?.longDescription && (
-            <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">{detail.longDescription}</p>
+            <p className="mt-5 text-[15px] leading-normal text-[#2F2F2F]">{detail.longDescription}</p>
           )}
 
           {/* What you'll discover */}
@@ -390,7 +390,7 @@ export default function QuestDetail() {
             <>
               <h2 className="mt-7 text-[19px] font-bold">Route details</h2>
               <div className="relative mt-4">
-                <div className="absolute left-[21px] top-11 bottom-11 w-0.5 bg-[#15A963]" />
+                <div className="absolute left-5.25 top-11 bottom-11 w-0.5 bg-[#15A963]" />
                 <TimelineRow
                   marker={<div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#15A963] bg-white">{<FlagIcon />}</div>}
                   kicker="Start point"
