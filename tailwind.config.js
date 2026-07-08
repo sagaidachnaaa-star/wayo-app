@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: '#F15B15', // Твій фірмовий помаранчевий колір для портфоліо!
+        brand: '#F15B15',
       },
     },
   },

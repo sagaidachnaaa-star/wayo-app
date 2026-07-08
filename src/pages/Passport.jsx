@@ -2,8 +2,7 @@ import { quests } from "../data/quests";
 import badge1 from "../assets/badge1.png";
 import lockedBadge from "../assets/Locked.png";
 
-// Badge artwork per quest — only quests with a matching entry here have
-// dedicated badge art; others fall back to the placeholder badge.
+
 const badgeImages = {
   "kyoto-garden-escape": badge1,
 };

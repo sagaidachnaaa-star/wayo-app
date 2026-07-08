@@ -7,7 +7,7 @@ import "leaflet/dist/leaflet.css";
 // Fallback used when geolocation is unavailable or denied.
 const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
 
-// ── Icons ────────────────────────────────────────────────────────────────────
+// Icons
 function LocateFabIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
