@@ -1,214 +1,20 @@
 import { useContext, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { quests } from "../data/quests";
+import { questDetails } from "../data/questDetails";
 import { SavedContext } from "../context/SavedContext";
-
-import greenwichMain from "../assets/GreenwichMain.png";
-import greenwichCuttySark from "../assets/GreenwichCuttySurk.png";
-import greenwichOldRoyal from "../assets/GreenwichOldRoyal.png";
-import greenwichPark from "../assets/GreenwichGreenwichPark.png";
-import greenwichViewpoint from "../assets/GreenwichGreenwichViewPoint.png";
-import greenwichBadgeClosed from "../assets/GreenwichbadgeClosed.png";
-
-import kyoto1 from "../assets/Kyoto1.png";
-import kyoto2 from "../assets/Kyoto2.png";
-import kyoto3 from "../assets/Kyoto3.png";
-import kyoto4 from "../assets/Kyoto4.png";
-
-import thames1 from "../assets/Thames1.png";
-import thames2 from "../assets/Thames2.png";
-import thames3 from "../assets/Thames3.png";
-import thames4 from "../assets/Thames4.png";
-
-import southbank1 from "../assets/Southbank1.png";
-import southbank2 from "../assets/Southbank2.png";
-import southbank3 from "../assets/Southbank3.png";
-import southbank4 from "../assets/Southbank4.png";
-
-import jamesPark1 from "../assets/JamesPark1.png";
-import jamesPark2 from "../assets/JamesPark2.png";
-import jamesPark3 from "../assets/JamesPark3.png";
-import jamesPark4 from "../assets/JamesPark4.png";
-
-import kyotoBadge from "../assets/badge1.png";
-import lockedBadge from "../assets/Locked.png";
+import { getCompletedQuests } from "../utils/questProgress";
 
 import distanceIcon from "../assets/DistanceIcon.png";
 import timeIcon from "../assets/TimeIcon.png";
 import difficultyIcon from "../assets/DifficultyIcon.png";
 import accessibilityIcon from "../assets/AccessibilityIcon.png";
-import pathsIcon from "../assets/PathsIcon.png";
-import uphillIcon from "../assets/UphillIcon.png";
-import stopsIcon from "../assets/StopsIcon.png";
-import toiletsIcon from "../assets/ToiletsIcon.png";
-import headphonesIcon from "../assets/HeadphonesIcon.png";
-
-// ── Per-quest detail content — only quests with dedicated photography and
-// route notes get the extended sections; others fall back to the basics. ────
-const questDetails = {
-  "greenwich-stroll": {
-    heroImages: [greenwichMain, greenwichCuttySark, greenwichOldRoyal, greenwichPark, greenwichViewpoint],
-    tags: ["Walking", "Riverside", "Parks & Gardens", "Hidden history"],
-    longDescription:
-      "Take a relaxed walk through Royal Greenwich and discover peaceful green spaces. This quest guides you through key local stops, from Cutty Sark to Greenwich Park, with clear directions and photo-worthy moments along the way.",
-    discover: [
-      { name: "Cutty Sark", image: greenwichCuttySark },
-      { name: "Old Royal College", image: greenwichOldRoyal },
-      { name: "Greenwich Park", image: greenwichPark },
-      { name: "Greenwich Viewpoint", image: greenwichViewpoint },
-    ],
-    route: {
-      start: "Cutty Sark DLR Station",
-      stops: ["Cutty Sark", "Old Royal Naval College", "Queen's House", "Greenwich Park"],
-      end: "Greenwich Park viewpoint",
-    },
-    safety: [
-      { icon: pathsIcon, title: "Mostly paved paths", text: "The route mainly follows pedestrian areas and park paths." },
-      { icon: uphillIcon, title: "Short uphill section", text: "There is moderate uphill part near Greenwich Park." },
-      { icon: stopsIcon, title: "Rest stops nearby", text: "Benches, cafés, and public spaces are available along the route." },
-      { icon: toiletsIcon, title: "Public toilets nearby", text: "Facilities are available near Cutty Sark and Greenwich town centre." },
-      { icon: headphonesIcon, title: "Stay aware at crossing", text: "Use headphones at low volume and check roads carefully." },
-    ],
-    weatherNote: "This is an outdoor route. Check the weather and wear comfortable shoes.",
-    badge: {
-      image: greenwichBadgeClosed,
-      name: "Greenwich Stroll badge",
-      desc: "Finish the route to collect this badge in your Passport.",
-    },
-  },
-
-  "kyoto-garden-escape": {
-    heroImages: [kyoto1, kyoto2, kyoto3, kyoto4],
-    tags: ["Walking", "Gardens", "Peaceful", "Photo Spots"],
-    longDescription:
-      "Slip away from Kensington's busy streets into a quiet Japanese-style garden. This short quest guides you past a waterfall, koi pond, and peace pagoda, ending with a calm sit-down spot perfect for a breather.",
-    discover: [
-      { name: "Garden Walkway", image: kyoto1 },
-      { name: "Kyoto Pavilion", image: kyoto2 },
-      { name: "Garden Bridge", image: kyoto3 },
-      { name: "Stone Lantern", image: kyoto4 },
-    ],
-    route: {
-      start: "Holland Park Main Gate",
-      stops: ["Kyoto Garden entrance", "Waterfall viewpoint", "Peace Pagoda"],
-      end: "Holland Park Café",
-    },
-    safety: [
-      { icon: pathsIcon, title: "Mostly paved paths", text: "Gravel and paved paths throughout, step-free access." },
-      { icon: stopsIcon, title: "Rest stops nearby", text: "Benches are dotted along the garden paths." },
-      { icon: toiletsIcon, title: "Public toilets nearby", text: "Facilities are available near the main park gate." },
-      { icon: headphonesIcon, title: "Keep it quiet", text: "This is a popular spot for quiet reflection — keep noise low." },
-    ],
-    weatherNote: "This is an outdoor route. Check the weather and wear comfortable shoes.",
-    badge: {
-      image: kyotoBadge,
-      name: "Kyoto Garden Escape badge",
-      desc: "Finish the route to collect this badge in your Passport.",
-    },
-  },
-
-  "thames-time-trail": {
-    heroImages: [thames1, thames2, thames3, thames4],
-    tags: ["Walking", "Riverside", "Architecture", "History"],
-    longDescription:
-      "Trace the Thames from the Tower of London to London Bridge, weaving through centuries of history — medieval fortress, Victorian markets, and the modern City skyline all on one riverside walk.",
-    discover: [
-      { name: "Tower Bridge", image: thames1 },
-      { name: "Borough Market", image: thames2 },
-      { name: "Market Stalls", image: thames3 },
-      { name: "City Skyline", image: thames4 },
-    ],
-    route: {
-      start: "Tower Hill Station",
-      stops: ["Tower of London", "Tower Bridge", "Borough Market"],
-      end: "London Bridge viewpoint",
-    },
-    safety: [
-      { icon: uphillIcon, title: "Busy crossings", text: "Several road crossings near Tower Bridge — take care." },
-      { icon: stopsIcon, title: "Rest stops nearby", text: "Cafés and benches along Borough Market and the riverside." },
-      { icon: toiletsIcon, title: "Public toilets nearby", text: "Facilities available at Borough Market and London Bridge." },
-      { icon: headphonesIcon, title: "Stay aware at crossings", text: "Use headphones at low volume and check roads carefully." },
-    ],
-    weatherNote: "This is an outdoor route. Check the weather and wear comfortable shoes.",
-    badge: {
-      image: lockedBadge,
-      name: "Thames Time Trail badge",
-      desc: "Finish the route to collect this badge in your Passport.",
-    },
-  },
-
-  "quiet-corners-southbank": {
-    heroImages: [southbank1, southbank2, southbank3, southbank4],
-    tags: ["Walking", "Riverside", "Photo Spots", "Cafés Nearby"],
-    longDescription:
-      "Skip the crowds and find Southbank's quieter side — hidden courtyards, riverside benches, and viewpoints over the Thames that most visitors walk straight past.",
-    discover: [
-      { name: "London Eye", image: southbank1 },
-      { name: "Riverside Skyline", image: southbank2 },
-      { name: "Millennium Bridge", image: southbank3 },
-      { name: "Riverside at Dusk", image: southbank4 },
-    ],
-    route: {
-      start: "Southbank Centre",
-      stops: ["Gabriel's Wharf", "OXO Tower", "Tate Modern"],
-      end: "Millennium Bridge viewpoint",
-    },
-    safety: [
-      { icon: pathsIcon, title: "Mostly paved paths", text: "Flat, step-free riverside paths for the whole route." },
-      { icon: stopsIcon, title: "Rest stops nearby", text: "Cafés and public seating along the riverside." },
-      { icon: toiletsIcon, title: "Public toilets nearby", text: "Facilities available near Gabriel's Wharf and Tate Modern." },
-    ],
-    weatherNote: "This is an outdoor route. Check the weather and wear comfortable shoes.",
-    badge: {
-      image: lockedBadge,
-      name: "Quiet Corners of Southbank badge",
-      desc: "Finish the route to collect this badge in your Passport.",
-    },
-  },
-
-  "green-escape-city": {
-    heroImages: [jamesPark1, jamesPark2, jamesPark3, jamesPark4],
-    tags: ["Walking", "Parks & Gardens", "Peaceful", "Photo Spots"],
-    longDescription:
-      "A short, peaceful loop through St James's Park — lakeside views, pelicans, and a classic postcard shot of Buckingham Palace from across the water.",
-    discover: [
-      { name: "The Lake", image: jamesPark1 },
-      { name: "Queen's Guard", image: jamesPark2 },
-      { name: "Buckingham Palace", image: jamesPark3 },
-      { name: "Victoria Memorial", image: jamesPark4 },
-    ],
-    route: {
-      start: "St James's Park Station",
-      stops: ["Blue Bridge", "Duck Island"],
-      end: "Buckingham Palace viewpoint",
-    },
-    safety: [
-      { icon: pathsIcon, title: "Mostly paved paths", text: "Flat, step-free paths throughout the park." },
-      { icon: stopsIcon, title: "Rest stops nearby", text: "Benches and a café are available along the lake." },
-      { icon: toiletsIcon, title: "Public toilets nearby", text: "Facilities are available near the park entrances." },
-    ],
-    weatherNote: "This is an outdoor route. Check the weather and wear comfortable shoes.",
-    badge: {
-      image: lockedBadge,
-      name: "Green Escape in the City badge",
-      desc: "Finish the route to collect this badge in your Passport.",
-    },
-  },
-};
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BackArrowIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function ShareIcon() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
-      <path d="M12 15V3m0 0-4 4m4-4 4 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -298,6 +104,11 @@ export default function QuestDetail() {
   const detail = questDetails[quest.id];
   const saved = Boolean(savedMap[quest.id]);
   const heroImages = detail?.heroImages ?? [quest.image];
+
+  // A quest stays repeatable after completion — it just never locks the
+  // badge again. completedQuestIds comes from localStorage (no backend yet).
+  const completedQuestIds = getCompletedQuests();
+  const isCompleted = quest.completed || completedQuestIds.includes(quest.id);
 
   function handlePointerDown(e) {
     pointerStartX.current = e.clientX;
@@ -394,21 +205,21 @@ export default function QuestDetail() {
                 <TimelineRow
                   marker={<div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#15A963] bg-white">{<FlagIcon />}</div>}
                   kicker="Start point"
-                  label={detail.route.start}
+                  label={detail.route.start.title}
                 />
                 {detail.route.stops.map((stop, i) => (
                   <TimelineRow
-                    key={stop}
+                    key={stop.title}
                     marker={<span className="h-3 w-3 rounded-full bg-[#15A963]" />}
                     kicker={`Stop ${i + 1}`}
-                    label={stop}
+                    label={stop.title}
                   />
                 ))}
                 <TimelineRow
                   last
                   marker={<div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#15A963] bg-white">{<CheckIcon />}</div>}
                   kicker="End point"
-                  label={detail.route.end}
+                  label={detail.route.end.title}
                 />
               </div>
             </>
@@ -449,7 +260,7 @@ export default function QuestDetail() {
                 <div className="flex flex-col justify-center">
                   <p className="text-[15px] font-bold text-[#2F2F2F]">{detail.badge.name}</p>
                   <p className="mt-1 text-[13px] leading-[1.4] text-[#8A857D]">{detail.badge.desc}</p>
-                  {quest.completed ? (
+                  {isCompleted ? (
                     <span className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-[#E7F5EF] px-3 py-1.5 text-[12px] font-medium text-[#15A963]">
                       <CheckIcon size={13} /> Collected
                     </span>
@@ -481,13 +292,6 @@ export default function QuestDetail() {
         <div className="flex gap-3">
           <button
             type="button"
-            aria-label="Share"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md"
-          >
-            <ShareIcon />
-          </button>
-          <button
-            type="button"
             onClick={() => toggleSaved(quest.id)}
             aria-label="Save quest"
             className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md"
@@ -497,14 +301,19 @@ export default function QuestDetail() {
         </div>
       </div>
 
-      {/* Sticky "Start quest" button — fixed over the bottom of the screen, independent of scroll */}
+      {/* Sticky "Start/Repeat quest" button — fixed over the bottom of the screen, independent of scroll */}
       <div className="absolute inset-x-5 bottom-5 z-30">
+        {isCompleted && (
+          <p className="mb-2 rounded-full bg-[#E7F5EF] px-4 py-2 text-center text-[13px] font-medium text-[#15A963] shadow-[0_4px_14px_rgba(47,47,47,0.08)]">
+            Badge already unlocked in your Passport.
+          </p>
+        )}
         <button
           type="button"
           onClick={() => navigate(`/quest/${quest.id}/active`)}
           className="flex h-14 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white shadow-[0_8px_24px_rgba(21,169,99,0.35)]"
         >
-          Start quest
+          {isCompleted ? "Repeat quest" : "Start quest"}
         </button>
       </div>
     </main>

@@ -1,14 +1,8 @@
 import { quests } from "../data/quests";
-import badge1 from "../assets/badge1.png";
+import { questDetails } from "../data/questDetails";
+import { getCompletedQuests } from "../utils/questProgress";
 import lockedBadge from "../assets/Locked.png";
 
-
-const badgeImages = {
-  "kyoto-garden-escape": badge1,
-};
-
-const placesDiscovered = 5;
-const totalPlaces = 20;
 const city = "London";
 
 function FlagIcon() {
@@ -45,10 +39,26 @@ function StatCard({ icon, label, value, total }) {
   );
 }
 
+// A quest counts as completed if it was seeded that way in quests.js, or if
+// the user finished it in this session (stored in localStorage, no backend yet).
+function isQuestCompleted(quest, completedIds) {
+  return quest.completed || completedIds.includes(quest.id);
+}
+
+// "Places discovered" is approximated as the number of stops across
+// completed quests — there's no separate places dataset in this MVP.
+function countStops(quest) {
+  return questDetails[quest.id]?.route?.stops?.length ?? 0;
+}
+
 export default function Passport() {
-  const completedQuests = quests.filter((q) => q.completed);
-  const lockedQuests = quests.filter((q) => !q.completed);
-  const pct = Math.round((placesDiscovered / totalPlaces) * 100);
+  const completedIds = getCompletedQuests();
+  const completedQuests = quests.filter((q) => isQuestCompleted(q, completedIds));
+  const lockedQuests = quests.filter((q) => !isQuestCompleted(q, completedIds));
+
+  const placesDiscovered = completedQuests.reduce((sum, q) => sum + countStops(q), 0);
+  const totalPlaces = quests.reduce((sum, q) => sum + countStops(q), 0);
+  const pct = totalPlaces > 0 ? Math.round((placesDiscovered / totalPlaces) * 100) : 0;
 
   return (
     <main className="h-full overflow-y-auto bg-[#F8F7F4] px-4 pb-6 text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">
@@ -73,14 +83,18 @@ export default function Passport() {
 
       <h2 className="mt-6 text-[20px] font-bold">Collected</h2>
       <div className="mt-3 grid grid-cols-3 gap-4">
-        {completedQuests.map((quest) => (
-          <div key={quest.id} className="flex flex-col items-center text-center">
-            <div className="flex h-32 w-32 items-center justify-center">
-              <img src={badgeImages[quest.id] ?? badge1} alt={quest.title} className="h-full w-full object-contain" />
+        {completedQuests.map((quest) => {
+          const badge = questDetails[quest.id]?.badge;
+          const badgeImage = badge?.unlockedImage ?? badge?.image ?? quest.image;
+          return (
+            <div key={quest.id} className="flex flex-col items-center text-center">
+              <div className="flex h-32 w-32 items-center justify-center">
+                <img src={badgeImage} alt={quest.title} className="h-full w-full object-contain" />
+              </div>
+              <p className="mt-2 text-[13px] font-semibold leading-tight">{quest.title}</p>
             </div>
-            <p className="mt-2 text-[13px] font-semibold leading-tight">{quest.title}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <h2 className="mt-6 text-[20px] font-bold">Locked</h2>
