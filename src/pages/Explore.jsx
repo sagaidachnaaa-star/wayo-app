@@ -1,7 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QuestCard from "../components/QuestCard";
 import QuestMapView from "../components/QuestMapView";
 import { quests } from "../data/quests";
+import { getCompletedQuests } from "../utils/questProgress";
+import { haversineDistanceKm } from "../utils/geo";
+
+// Used for "Closest" sorting if the user denies/lacks geolocation.
+const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
@@ -249,14 +254,13 @@ const accessibilityOpts = ["Step-free", "Pram Friendly", "Fully Paved"];
 const activityOpts      = ["Walking", "Cycling", "Public transport"];
 const featureOpts       = ["Street Art", "Hidden History", "Riverside", "Parks & Gardens", "Architecture", "Photo Spots", "Cafés Nearby"];
 
-function FiltersSheet({ onClose, filteredCount }) {
+function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
   const [diff, setDiff]     = useState([]);
   const [duration, setDuration] = useState(90);
   const [distance, setDistance] = useState(15);
   const [acc, setAcc]       = useState([]);
   const [act, setAct]       = useState([]);
   const [feat, setFeat]     = useState([]);
-  const [myQ, setMyQ]       = useState("All");
 
   function toggle(arr, setArr, val) {
     setArr((p) => p.includes(val) ? p.filter((v) => v !== val) : [...p, val]);
@@ -324,7 +328,11 @@ function FiltersSheet({ onClose, filteredCount }) {
         </div>
 
         <div className="flex gap-3 border-t border-[#EDECE6] px-5 py-4 shrink-0">
-          <button type="button" onClick={onClose} className="flex h-13.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]">
+          <button
+            type="button"
+            onClick={() => { setMyQ("All"); onClose(); }}
+            className="flex h-13.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]"
+          >
             Clear all
           </button>
           <button type="button" onClick={onClose} className="flex h-13.5 flex-2 items-center justify-center rounded-full bg-[#15A963] text-[15px] font-semibold text-white">
@@ -337,10 +345,12 @@ function FiltersSheet({ onClose, filteredCount }) {
 }
 
 // ── Search expanded ───────────────────────────────────────────────────────────
-function SearchExpanded({ query, setQuery, onClose }) {
+function SearchExpanded({ query, setQuery, results, onNearby, onClose }) {
+  const hasQuery = query.trim() !== "";
+
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-[#F8F7F4] px-4 pt-4">
-      <div className="flex h-13.5 items-center gap-3 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(47,47,47,0.07)]">
+      <div className="flex h-13.5 shrink-0 items-center gap-3 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(47,47,47,0.07)]">
         <button type="button" onClick={onClose}><BackIcon /></button>
         <input
           autoFocus
@@ -350,7 +360,12 @@ function SearchExpanded({ query, setQuery, onClose }) {
           className="flex-1 bg-transparent text-[16px] font-medium text-[#2F2F2F] outline-none placeholder:text-[#A7A39D]"
         />
       </div>
-      <div className="mt-3 flex items-center gap-4 rounded-2xl bg-white p-4 shadow-[0_4px_14px_rgba(47,47,47,0.06)]">
+
+      <button
+        type="button"
+        onClick={onNearby}
+        className="mt-3 flex shrink-0 items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-[0_4px_14px_rgba(47,47,47,0.06)]"
+      >
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0FBF5]">
           <LocationArrow />
         </div>
@@ -358,7 +373,24 @@ function SearchExpanded({ query, setQuery, onClose }) {
           <p className="text-[15px] font-semibold text-[#2F2F2F]">Nearby quest</p>
           <p className="text-[13px] text-[#8A857D]">Use my current location</p>
         </div>
-      </div>
+      </button>
+
+      {hasQuery && (
+        <div className="mt-4 flex-1 overflow-y-auto pb-6 [&::-webkit-scrollbar]:hidden">
+          <p className="mb-3 text-[13px] font-medium text-[#8A857D]">
+            {results.length} quest{results.length !== 1 ? "s" : ""} found
+          </p>
+          {results.length > 0 ? (
+            <div className="space-y-4">
+              {results.map((quest) => (
+                <QuestCard key={quest.id} quest={quest} variant="compact" />
+              ))}
+            </div>
+          ) : (
+            <p className="mt-8 text-center text-[14px] text-[#8A857D]">No quests match "{query}".</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -376,6 +408,28 @@ export default function Explore() {
   const [sort, setSort]             = useState("Most relevant");
   const [duration, setDuration]     = useState(120);
   const [distance, setDistance]     = useState(15);
+  const [myQ, setMyQ]               = useState("All");
+
+  // Only requested once the user actually picks "Closest", so we don't
+  // prompt for location permission before it's needed.
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationDenied, setLocationDenied] = useState(false);
+  const locationRequested = useRef(false);
+
+  useEffect(() => {
+    if (sort !== "Closest" || locationRequested.current) return;
+    locationRequested.current = true;
+
+    if (!("geolocation" in navigator)) {
+      const timeoutId = setTimeout(() => setLocationDenied(true), 0);
+      return () => clearTimeout(timeoutId);
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setLocationDenied(true),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, [sort]);
 
   const [isSearchOpen, setIsSearchOpen]     = useState(false);
   const [isFiltersOpen, setIsFiltersOpen]   = useState(false);
@@ -383,6 +437,12 @@ export default function Explore() {
   const [isDurationOpen, setIsDurationOpen] = useState(false);
   const [isDistanceOpen, setIsDistanceOpen] = useState(false);
   const [isSortOpen, setIsSortOpen]         = useState(false);
+
+  function handleNearby() {
+    setQuery("");
+    setSort("Closest");
+    setIsSearchOpen(false);
+  }
 
   // Peek-map sheet: sheetTop is the distance (px) the sheet's top edge sits
   // from the top of the page. 0 = full list, covering the map entirely.
@@ -436,12 +496,38 @@ export default function Explore() {
   }
 
   const filtered = useMemo(() => {
-    return quests.filter((q) => {
+    const completedIds = getCompletedQuests();
+    const matches = quests.filter((q) => {
       const matchDiff = difficulty === "All" || q.difficulty === difficulty;
       const text = `${q.title} ${q.location} ${q.description}`.toLowerCase();
-      return matchDiff && text.includes(query.toLowerCase());
+      const matchesText = text.includes(query.toLowerCase());
+
+      const isCompleted = q.completed || completedIds.includes(q.id);
+      const matchMyQ =
+        myQ === "All" || (myQ === "Completed" && isCompleted) || (myQ === "Not completed" && !isCompleted);
+
+      return matchDiff && matchesText && matchMyQ;
     });
-  }, [query, difficulty]);
+
+    if (sort === "Most popular") {
+      return [...matches].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+    }
+    if (sort === "Newly added") {
+      return [...matches].sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+    }
+    if (sort === "Closest") {
+      const from = userLocation ?? (locationDenied ? DEFAULT_LOCATION : null);
+      if (from) {
+        return [...matches].sort(
+          (a, b) =>
+            haversineDistanceKm(from.lat, from.lng, a.coordinates.lat, a.coordinates.lng) -
+            haversineDistanceKm(from.lat, from.lng, b.coordinates.lat, b.coordinates.lng)
+        );
+      }
+    }
+    // "Most relevant" (default), or "Closest" while location is still loading.
+    return matches;
+  }, [query, difficulty, myQ, sort, userLocation, locationDenied]);
 
   const anySheetOpen = isFiltersOpen || isDiffOpen || isDurationOpen || isDistanceOpen || isSortOpen;
 
@@ -581,10 +667,18 @@ export default function Explore() {
       )}
 
       {/* Search */}
-      {isSearchOpen && <SearchExpanded query={query} setQuery={setQuery} onClose={() => setIsSearchOpen(false)} />}
+      {isSearchOpen && (
+        <SearchExpanded
+          query={query}
+          setQuery={setQuery}
+          results={filtered}
+          onNearby={handleNearby}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
 
       {/* Sheets */}
-      {isFiltersOpen   && <FiltersSheet onClose={() => setIsFiltersOpen(false)} filteredCount={filtered.length} />}
+      {isFiltersOpen   && <FiltersSheet onClose={() => setIsFiltersOpen(false)} filteredCount={filtered.length} myQ={myQ} setMyQ={setMyQ} />}
       {isDiffOpen      && <DifficultySheet selected={difficulty} onChange={setDifficulty} onClose={() => setIsDiffOpen(false)} count={filtered.length} />}
       {isDurationOpen  && <DurationSheet value={duration} onChange={setDuration} onClose={() => setIsDurationOpen(false)} count={filtered.length} />}
       {isDistanceOpen  && <DistanceSheet value={distance} onChange={setDistance} onClose={() => setIsDistanceOpen(false)} count={filtered.length} />}

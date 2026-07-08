@@ -21,6 +21,8 @@ export const quests = [
     isDaily: true,
     isSaved: false,
     completed: false,
+    popularity: 95,
+    createdAt: "2026-01-15",
   },
   {
     id: "kyoto-garden-escape",
@@ -38,6 +40,8 @@ export const quests = [
     isDaily: false,
     isSaved: false,
     completed: true,
+    popularity: 70,
+    createdAt: "2026-02-10",
   },
   {
     id: "thames-time-trail",
@@ -55,6 +59,8 @@ export const quests = [
     isDaily: false,
     isSaved: false,
     completed: false,
+    popularity: 85,
+    createdAt: "2026-03-05",
   },
   {
     id: "quiet-corners-southbank",
@@ -72,6 +78,8 @@ export const quests = [
     isDaily: false,
     isSaved: false,
     completed: false,
+    popularity: 60,
+    createdAt: "2026-04-01",
   },
   {
     id: "green-escape-city",
@@ -89,5 +97,7 @@ export const quests = [
     isDaily: false,
     isSaved: false,
     completed: false,
+    popularity: 55,
+    createdAt: "2026-04-20",
   },
 ];
