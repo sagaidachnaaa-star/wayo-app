@@ -1,8 +1,37 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import QuestCard from "../components/QuestCard";
 import { SavedContext } from "../context/SavedContext";
-import { quests } from "../data/quests";
+
+const API_URL = "http://localhost:5050";
+
+// ── Backend response → the flat shape QuestCard expects ─────────────────────
+function formatDuration(minutes) {
+  if (minutes == null) return "";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest} min`;
+}
+function formatDistance(km) {
+  if (km == null) return "";
+  return `${Number(km).toFixed(1)} km`;
+}
+function normalizeSavedQuest(api) {
+  return {
+    id: api.id,
+    title: api.title,
+    location: api.location,
+    description: api.description,
+    difficulty: api.difficulty,
+    duration: formatDuration(api.duration_min),
+    distance: formatDistance(api.distance_km),
+    accessibility: api.accessibility,
+    image: api.image_url,
+    isDaily: Boolean(api.is_daily),
+    savedAt: api.saved_at,
+  };
+}
 
 function ChevronDown() {
   return (
@@ -66,15 +95,49 @@ export default function Saved() {
   const [sort, setSort] = useState("Last updated");
   const [isSortOpen, setIsSortOpen] = useState(false);
 
-  const savedQuests = useMemo(() => {
-    const list = quests.filter((q) => savedMap[q.id]);
-    if (sort === "Name") {
-      return [...list].sort((a, b) => a.title.localeCompare(b.title));
-    }
-    return [...list].sort((a, b) => savedMap[b.id] - savedMap[a.id]);
-  }, [savedMap, sort]);
+  const [savedQuests, setSavedQuests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const isEmpty = savedQuests.length === 0;
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_URL}/api/saved`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setSavedQuests(data.map(normalizeSavedQuest));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || "Something went wrong loading saved quests.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
+
+  // savedMap (from context) stays live as hearts are toggled anywhere in the
+  // app, so unsaving a quest removes its card here immediately — without
+  // needing to refetch the whole list from the backend every time.
+  const visibleQuests = useMemo(() => savedQuests.filter((q) => savedMap[q.id]), [savedQuests, savedMap]);
+
+  const sortedQuests = useMemo(() => {
+    if (sort === "Name") {
+      return [...visibleQuests].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    return [...visibleQuests].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  }, [visibleQuests, sort]);
+
+  const isEmpty = sortedQuests.length === 0;
 
   return (
     <main className="relative flex h-full flex-col overflow-hidden bg-[#F8F7F4] text-[#2F2F2F]">
@@ -90,7 +153,24 @@ export default function Saved() {
           <ChevronDown />
         </button>
 
-        {isEmpty ? (
+        {isLoading ? (
+          <p className="mt-8 text-center text-[14px] text-[#8A857D]">Loading saved quests…</p>
+        ) : error ? (
+          <div className="mt-8 flex flex-col items-center gap-3 text-center">
+            <p className="text-[14px] text-[#8A857D]">Couldn't load saved quests. {error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setIsLoading(true);
+                setError(null);
+                setRetryCount((c) => c + 1);
+              }}
+              className="rounded-full bg-[#15A963] px-5 py-2.5 text-[14px] font-semibold text-white"
+            >
+              Try again
+            </button>
+          </div>
+        ) : isEmpty ? (
           <div className="mt-24 flex flex-col items-center px-6 text-center">
             <HeartOutlineIcon />
             <h2 className="mt-5 text-[19px] font-bold text-[#2F2F2F]">Add your first favourite</h2>
@@ -107,7 +187,7 @@ export default function Saved() {
           </div>
         ) : (
           <section className="mt-4 space-y-4">
-            {savedQuests.map((quest) => (
+            {sortedQuests.map((quest) => (
               <QuestCard key={quest.id} quest={quest} variant="compact" />
             ))}
           </section>

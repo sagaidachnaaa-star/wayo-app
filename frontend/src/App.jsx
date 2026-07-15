@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Routes, Route, useLocation } from "react-router";
 import BottomNav from "./components/BottomNav";
 import { SplashOverlayContext } from "./context/SplashContext";
@@ -55,6 +55,7 @@ function StatusBar({ overlay = false }) {
   );
 }
 
+const API_URL = "http://localhost:5050";
 const NO_NAV = ["/", "/onboarding"];
 
 function Shell() {
@@ -111,13 +112,50 @@ function Shell() {
 function App() {
   const [greenPhase, setGreenPhase] = useState(false);
   const [savedMap, setSavedMap] = useState({});
+  const savedMapRef = useRef(savedMap);
+
+  // Load which quests are already saved (backend is the source of truth —
+  // no login yet, so this is always the one demo user's saved list).
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_URL}/api/saved`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (cancelled) return;
+        const map = {};
+        data.forEach((quest) => {
+          map[quest.id] = quest.saved_at ? new Date(quest.saved_at).getTime() : Date.now();
+        });
+        setSavedMap(map);
+      })
+      .catch(() => {
+        // Backend not reachable yet — just start with nothing saved locally.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    savedMapRef.current = savedMap;
+  }, [savedMap]);
 
   const toggleSaved = useCallback((id) => {
+    const wasSaved = Boolean(savedMapRef.current[id]);
+
     setSavedMap((prev) => {
       const next = { ...prev };
-      if (next[id]) delete next[id];
+      if (wasSaved) delete next[id];
       else next[id] = Date.now();
       return next;
+    });
+
+    // Optimistic UI update above already happened — persist to the backend
+    // in the background. MVP: no rollback if this fails, just log it.
+    fetch(`${API_URL}/api/saved/${id}`, { method: wasSaved ? "DELETE" : "POST" }).catch(() => {
+      console.error("Failed to sync saved quest with the backend");
     });
   }, []);
 

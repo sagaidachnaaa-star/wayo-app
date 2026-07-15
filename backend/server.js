@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./db/connection");
 const questsRouter = require("./routes/quests");
+const savedRouter = require("./routes/saved");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,6 +32,9 @@ app.get("/api/test-db", async (req, res) => {
 
 // Quest routes
 app.use("/api/quests", questsRouter);
+
+// Saved quests (single demo user, no auth yet)
+app.use("/api/saved", savedRouter);
 
 app.listen(PORT, () => {
   console.log(`WAYO backend running on http://localhost:${PORT}`);
