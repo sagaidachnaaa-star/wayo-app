@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Leaflet's attribution control is tiny but very insistent about being
+   readable — shrink it so it never competes with app UI sitting near it. */
+.leaflet-control-attribution {
+  font-size: 9px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.75);
+}
