@@ -1,7 +1,5 @@
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { quests } from "../data/quests";
-import { questDetails } from "../data/questDetails";
 import { SavedContext } from "../context/SavedContext";
 import { getCompletedQuests } from "../utils/questProgress";
 
@@ -9,6 +7,130 @@ import distanceIcon from "../assets/DistanceIcon.png";
 import timeIcon from "../assets/TimeIcon.png";
 import difficultyIcon from "../assets/DifficultyIcon.png";
 import accessibilityIcon from "../assets/AccessibilityIcon.png";
+
+const API_URL = "http://localhost:5050";
+const WEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+const LOCKED_BADGE_IMAGE = "/assets/Lockedbadge.png";
+
+// ── Backend response → the flat shape this page's JSX expects ───────────────
+function formatDuration(minutes) {
+  if (minutes == null) return "";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest} min`;
+}
+function formatDistance(km) {
+  if (km == null) return "";
+  return `${Number(km).toFixed(1)} km`;
+}
+// quest_stops rows are one flat, ordered list with a stop_type of
+// "start" | "checkpoint" | "viewpoint" — split that into the
+// start / middle stops / end shape the route timeline renders.
+function buildRoute(stops) {
+  if (!stops || stops.length === 0) return null;
+  const start = stops.find((s) => s.stop_type === "start") ?? stops[0];
+  const end = [...stops].reverse().find((s) => s.stop_type === "viewpoint") ?? stops[stops.length - 1];
+  const middle = stops.filter((s) => s !== start && s !== end);
+  return {
+    start: { title: start.title },
+    stops: middle.map((s) => ({ title: s.title })),
+    end: { title: end.title },
+  };
+}
+function normalizeQuestDetail(api) {
+  return {
+    id: api.id,
+    title: api.title,
+    location: api.location,
+    description: api.description,
+    longDescription: api.overview,
+    difficulty: api.difficulty,
+    duration: formatDuration(api.duration_min),
+    distance: formatDistance(api.distance_km),
+    accessibility: api.accessibility,
+    image: api.image_url,
+    isDaily: Boolean(api.is_daily),
+    lat: Number(api.latitude),
+    lng: Number(api.longitude),
+    route: buildRoute(api.stops),
+    safety: (api.accessibility_notes ?? []).map((n) => ({ title: n.title, text: n.text })),
+    badge: api.badge
+      ? { image: api.badge.image_url, name: api.badge.title, desc: api.badge.description }
+      : null,
+  };
+}
+
+// The backend doesn't return gallery photos yet — this is visual supporting
+// content only, keyed by quest id, using the images already placed in
+// frontend/public/assets. Core quest content (title/description/etc.) still
+// comes entirely from the API above.
+const discoverImagesByQuestId = {
+  "greenwich-stroll": [
+    { name: "Cutty Sark", image: "/assets/GreenwichCuttySurk.png" },
+    { name: "Old Royal College", image: "/assets/GreenwichOldRoyal.png" },
+    { name: "Greenwich Park", image: "/assets/GreenwichGreenwichPark.png" },
+    { name: "Greenwich Viewpoint", image: "/assets/GreenwichGreenwichViewPoint.png" },
+  ],
+  "kyoto-garden-escape": [
+    { name: "Garden Walkway", image: "/assets/Kyoto1.png" },
+    { name: "Kyoto Pavilion", image: "/assets/Kyoto2.png" },
+    { name: "Garden Bridge", image: "/assets/Kyoto3.png" },
+    { name: "Stone Lantern", image: "/assets/Kyoto4.png" },
+  ],
+  "thames-time-trail": [
+    { name: "Tower Bridge", image: "/assets/Thames1.png" },
+    { name: "Borough Market", image: "/assets/Thames2.png" },
+    { name: "Market Stalls", image: "/assets/Thames3.png" },
+    { name: "City Skyline", image: "/assets/Thames4.png" },
+  ],
+  "quiet-corners-southbank": [
+    { name: "London Eye", image: "/assets/Southbank1.png" },
+    { name: "Riverside Skyline", image: "/assets/Southbank2.png" },
+    { name: "Millennium Bridge", image: "/assets/Southbank3.png" },
+    { name: "Riverside at Dusk", image: "/assets/Southbank4.png" },
+  ],
+  "green-escape-city": [
+    { name: "The Lake", image: "/assets/JamesPark1.png" },
+    { name: "Queen's Guard", image: "/assets/JamesPark2.png" },
+    { name: "Buckingham Palace", image: "/assets/JamesPark3.png" },
+    { name: "Victoria Memorial", image: "/assets/JamesPark4.png" },
+  ],
+};
+
+// The backend doesn't return category tags yet — small frontend-only
+// mapping for the emotional/category line under the title (not derived
+// from difficulty/duration/distance, those already have their own stat boxes).
+const categoryTagsByQuestId = {
+  "greenwich-stroll": ["Walking", "Riverside", "Parks & Gardens", "Hidden history"],
+  "kyoto-garden-escape": ["Walking", "Garden", "Peaceful", "Nature"],
+  "thames-time-trail": ["Walking", "Riverside", "History", "Landmarks"],
+  "quiet-corners-southbank": ["Walking", "Hidden spots", "Riverside", "Independent places"],
+  "green-escape-city": ["Walking", "Parks & Gardens", "Royal park", "Relaxed"],
+};
+
+// The backend's badge.image_url points at files that don't exist yet for
+// most quests — where real badge art already exists in public/assets,
+// use it instead of falling back to the generic Locked placeholder.
+// This is the colour artwork shown once a quest is completed — before
+// that, LOCKED_BADGE_IMAGE (a dedicated locked-badge graphic) is shown instead.
+const badgeImageOverrides = {
+  "greenwich-stroll": "/assets/GreenwichStrollReward.png",
+  "kyoto-garden-escape": "/assets/badge1.png",
+  "thames-time-trail": "/assets/thames-trail-badge.png",
+  "quiet-corners-southbank": "/assets/QuiteCornersofSouthbank.png",
+  "green-escape-city": "/assets/GreenEscapeinCity.png",
+};
+
+// The API only returns title/text for accessibility notes, no icon — pick a
+// sensible one from the note's title, falling back to a generic checkmark.
+function getSafetyIcon(title) {
+  const t = title.toLowerCase();
+  if (t.includes("step-free") || t.includes("paved") || t.includes("flat")) return accessibilityIcon;
+  if (t.includes("rest stop")) return "/assets/StopsIcon.png";
+  if (t.includes("busy") || t.includes("aware") || t.includes("uphill")) return "/assets/UphillIcon.png";
+  return null; // → generic checkmark
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BackArrowIcon() {
@@ -53,6 +175,20 @@ function LockIcon() {
     </svg>
   );
 }
+function WeatherIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="9" r="3.5" stroke="#15A963" strokeWidth="1.8" />
+      <path
+        d="M12.5 17h5a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.6-1.4"
+        stroke="#15A963"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 // ── Stat box (Distance / Time / Difficulty / Accessibility) ──────────────────
 function StatBox({ icon, label, value }) {
@@ -88,27 +224,106 @@ const SWIPE_THRESHOLD = 50;
 export default function QuestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const quest = quests.find((q) => q.id === id);
   const { savedMap, toggleSaved } = useContext(SavedContext);
   const [activeImg, setActiveImg] = useState(0);
   const pointerStartX = useRef(null);
 
-  if (!quest) {
-    return (
-      <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
-        <p>Quest not found.</p>
-      </main>
-    );
-  }
+  const [quest, setQuest] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const detail = questDetails[quest.id];
-  const saved = Boolean(savedMap[quest.id]);
-  const heroImages = detail?.heroImages ?? [quest.image];
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_URL}/api/quests/${id}`)
+      .then((res) => {
+        if (res.status === 404) {
+          if (!cancelled) setNotFound(true);
+          return null;
+        }
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled || !data) return;
+        setQuest(normalizeQuestDetail(data));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || "Something went wrong loading this quest.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, retryCount]);
+
+  // Small weather block, driven by the quest's own coordinates. Never blocks
+  // or breaks the page — no key, no coordinates, or a failed request all
+  // just fall back to a plain "unavailable" message.
+  const [weather, setWeather] = useState(null);
+  const [weatherStatus, setWeatherStatus] = useState("idle"); // idle | loading | ready | error
+
+  useEffect(() => {
+    if (!quest || !Number.isFinite(quest.lat) || !Number.isFinite(quest.lng)) return;
+
+    let cancelled = false;
+
+    if (!WEATHER_API_KEY) {
+      const timeoutId = setTimeout(() => setWeatherStatus("error"), 0);
+      return () => clearTimeout(timeoutId);
+    }
+
+    // Deferred a tick so the state updates below happen outside the effect's
+    // own synchronous body (avoids a cascading-render warning), same trick
+    // used for the geolocation fallback elsewhere in this app.
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      setWeatherStatus("loading");
+
+      fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${quest.lat}&lon=${quest.lng}&appid=${WEATHER_API_KEY}&units=metric`
+      )
+        .then((res) => {
+          if (!res.ok) throw new Error("Weather request failed");
+          return res.json();
+        })
+        .then((data) => {
+          if (cancelled) return;
+          setWeather({
+            temp: Math.round(data?.main?.temp),
+            description: data?.weather?.[0]?.description ?? "",
+          });
+          setWeatherStatus("ready");
+        })
+        .catch(() => {
+          if (!cancelled) setWeatherStatus("error");
+        });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quest?.lat, quest?.lng]);
+
+  const saved = Boolean(savedMap[id]);
+  // Top carousel = the real backend photo first, then the same photos used
+  // in "What you'll discover" below, so it's actually scrollable/swipeable.
+  const heroImages = [quest?.image, ...(discoverImagesByQuestId[quest?.id]?.map((d) => d.image) ?? [])].filter(
+    Boolean
+  );
 
   // A quest stays repeatable after completion — it just never locks the
   // badge again. completedQuestIds comes from localStorage (no backend yet).
   const completedQuestIds = getCompletedQuests();
-  const isCompleted = quest.completed || completedQuestIds.includes(quest.id);
+  const isCompleted = completedQuestIds.includes(id);
 
   function handlePointerDown(e) {
     pointerStartX.current = e.clientX;
@@ -124,6 +339,46 @@ export default function QuestDetail() {
       setActiveImg((i) => Math.max(i - 1, 0));
     }
   }
+
+  if (isLoading) {
+    return (
+      <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
+        <p>Loading quest…</p>
+      </main>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
+        <p>Quest not found.</p>
+      </main>
+    );
+  }
+
+  if (error || !quest) {
+    return (
+      <main className="flex h-full flex-col items-center justify-center gap-3 bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
+        <p className="text-[14px] text-[#8A857D]">Couldn't load this quest. {error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            setRetryCount((c) => c + 1);
+          }}
+          className="rounded-full bg-[#15A963] px-5 py-2.5 text-[14px] font-semibold text-white"
+        >
+          Try again
+        </button>
+      </main>
+    );
+  }
+
+  const detail = quest; // same normalized object carries both the "basic" and "extended" fields
+
+  const tags = categoryTagsByQuestId[quest.id] ?? [];
+  const discover = discoverImagesByQuestId[quest.id];
 
   return (
     <main className="relative h-full overflow-hidden bg-[#F8F7F4]">
@@ -163,9 +418,14 @@ export default function QuestDetail() {
           <h1 className="text-[26px] font-bold leading-tight">{quest.title}</h1>
           <p className="mt-1.5 text-[15px] text-[#2F2F2F]">{quest.description}</p>
 
-          {detail?.tags && (
-            <p className="mt-2 text-[13px] font-medium text-[#15A963]">
-              {detail.tags.join("  ·  ")}
+          {tags.length > 0 && (
+            <p className="mt-2 text-[13px] font-medium text-[#6F6A62]">
+              {tags.map((tag, i) => (
+                <span key={tag}>
+                  {i > 0 && <span className="text-[#15A963]"> · </span>}
+                  {tag}
+                </span>
+              ))}
             </p>
           )}
 
@@ -182,11 +442,11 @@ export default function QuestDetail() {
           )}
 
           {/* What you'll discover */}
-          {detail?.discover && (
+          {discover && discover.length > 0 && (
             <>
               <h2 className="mt-7 text-[19px] font-bold">What you&apos;ll discover</h2>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                {detail.discover.map((d) => (
+                {discover.map((d) => (
                   <div key={d.name}>
                     <img src={d.image} alt={d.name} className="h-24 w-full rounded-2xl object-cover" />
                     <p className="mt-1.5 text-center text-[14px] font-semibold">{d.name}</p>
@@ -226,28 +486,49 @@ export default function QuestDetail() {
           )}
 
           {/* Accessibility & safety */}
-          {detail?.safety && (
+          {detail?.safety && detail.safety.length > 0 && (
             <>
               <h2 className="mt-7 text-[19px] font-bold">Accessibility &amp; safety</h2>
               <p className="mt-1 text-[13px] text-[#8A857D]">Important route notes before you start</p>
               <div className="mt-4 space-y-4">
-                {detail.safety.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#15A963]">
-                      <img src={item.icon} alt="" className="h-5 w-5" />
+                {detail.safety.map((item) => {
+                  const icon = getSafetyIcon(item.title);
+                  return (
+                    <div key={item.title} className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#15A963]">
+                        {icon ? <img src={icon} alt="" className="h-5 w-5" /> : <CheckIcon size={18} />}
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-bold text-[#2F2F2F]">{item.title}</p>
+                        <p className="mt-0.5 text-[13px] leading-[1.4] text-[#8A857D]">{item.text}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[15px] font-bold text-[#2F2F2F]">{item.title}</p>
-                      <p className="mt-0.5 text-[13px] leading-[1.4] text-[#8A857D]">{item.text}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              {detail.weatherNote && (
-                <p className="mt-4 text-[13px] leading-[1.4] text-[#8A857D]">{detail.weatherNote}</p>
-              )}
             </>
           )}
+
+          {/* Weather */}
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_4px_16px_rgba(47,47,47,0.06)]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E7F5EF]">
+              <WeatherIcon />
+            </div>
+            <div>
+              {weatherStatus === "ready" && weather && Number.isFinite(weather.temp) ? (
+                <>
+                  <p className="text-[15px] font-bold text-[#2F2F2F]">
+                    {weather.temp}°C{weather.description ? ` · ${weather.description}` : ""}
+                  </p>
+                  <p className="text-[13px] text-[#8A857D]">Check the weather before starting this outdoor quest.</p>
+                </>
+              ) : weatherStatus === "loading" ? (
+                <p className="text-[13px] text-[#8A857D]">Loading weather…</p>
+              ) : (
+                <p className="text-[13px] text-[#8A857D]">Weather information is currently unavailable.</p>
+              )}
+            </div>
+          </div>
 
           {/* Quest reward */}
           {detail?.badge && (
@@ -255,7 +536,15 @@ export default function QuestDetail() {
               <h2 className="mt-7 text-[19px] font-bold">Quest reward</h2>
               <div className="mt-3 flex gap-4 rounded-2xl bg-white p-4 shadow-[0_4px_16px_rgba(47,47,47,0.06)]">
                 <div className="flex h-28 w-24 shrink-0 items-center justify-center">
-                  <img src={detail.badge.image} alt={detail.badge.name} className="h-full w-full object-contain" />
+                  <img
+                    src={isCompleted ? (badgeImageOverrides[quest.id] ?? detail.badge.image) : LOCKED_BADGE_IMAGE}
+                    alt={detail.badge.name}
+                    className="h-full w-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = LOCKED_BADGE_IMAGE;
+                    }}
+                  />
                 </div>
                 <div className="flex flex-col justify-center">
                   <p className="text-[15px] font-bold text-[#2F2F2F]">{detail.badge.name}</p>
