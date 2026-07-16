@@ -2,6 +2,7 @@ CREATE DATABASE IF NOT EXISTS wayo_db;
 USE wayo_db;
 
 -- Drop tables in the correct order
+DROP TABLE IF EXISTS reported_issues;
 DROP TABLE IF EXISTS completed_quests;
 DROP TABLE IF EXISTS saved_quests;
 DROP TABLE IF EXISTS badges;
@@ -103,4 +104,21 @@ CREATE TABLE completed_quests (
         FOREIGN KEY (quest_id) REFERENCES quests(id)
         ON DELETE CASCADE,
     CONSTRAINT uq_completed_user_quest UNIQUE (user_id, quest_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. Reported issues (Report a Problem screen)
+CREATE TABLE reported_issues (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    quest_id VARCHAR(100) NULL,
+    issue_type VARCHAR(100) NOT NULL,
+    details TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'new',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reports_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_reports_quest
+        FOREIGN KEY (quest_id) REFERENCES quests(id)
+        ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

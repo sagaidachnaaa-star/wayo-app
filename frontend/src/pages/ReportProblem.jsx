@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import BackButton from "../components/BackButton";
 
+const API_URL = "http://localhost:5050";
+
 const reasons = ["Route or directions issue", "Incorrect quest info", "Safety concern", "App bug", "Something else"];
 
 export default function ReportProblem() {
@@ -9,10 +11,26 @@ export default function ReportProblem() {
   const [reason, setReason] = useState(reasons[0]);
   const [details, setDetails] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   function handleSubmit(e) {
     e.preventDefault();
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setError(null);
+
+    fetch(`${API_URL}/api/reports`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issue_type: reason, details }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      })
+      .then(() => setSubmitted(true))
+      .catch((err) => setError(err.message || "Something went wrong submitting your report."))
+      .finally(() => setIsSubmitting(false));
   }
 
   if (submitted) {
@@ -75,11 +93,16 @@ export default function ReportProblem() {
           className="mt-2 w-full rounded-2xl bg-white p-4 text-[14px] text-[#2F2F2F] shadow-[0_4px_16px_rgba(47,47,47,0.06)] outline-none placeholder:text-[#A7A39D]"
         />
 
+        {error && (
+          <p className="mt-4 text-[13px] text-[#D44A08]">Couldn't submit your report. {error}</p>
+        )}
+
         <button
           type="submit"
-          className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white"
+          disabled={isSubmitting || details.trim() === ""}
+          className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white disabled:opacity-50"
         >
-          Submit report
+          {isSubmitting ? "Submitting…" : "Submit report"}
         </button>
       </form>
     </main>

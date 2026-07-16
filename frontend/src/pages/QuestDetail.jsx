@@ -321,9 +321,34 @@ export default function QuestDetail() {
   );
 
   // A quest stays repeatable after completion — it just never locks the
-  // badge again. completedQuestIds comes from localStorage (no backend yet).
+  // badge again. The backend is the source of truth; localStorage is only
+  // used while that request is in flight or if it fails.
+  const [completedFromApi, setCompletedFromApi] = useState(null); // null | boolean
+
+  useEffect(() => {
+    let cancelled = false;
+    setCompletedFromApi(null);
+
+    fetch(`${API_URL}/api/completed/${id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setCompletedFromApi(Boolean(data?.completed));
+      })
+      .catch(() => {
+        // Leave completedFromApi as null — the localStorage fallback below takes over.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const completedQuestIds = getCompletedQuests();
-  const isCompleted = completedQuestIds.includes(id);
+  const isCompleted = completedFromApi !== null ? completedFromApi : completedQuestIds.includes(id);
 
   function handlePointerDown(e) {
     pointerStartX.current = e.clientX;

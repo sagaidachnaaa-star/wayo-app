@@ -9,6 +9,18 @@ const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
 
 const API_URL = "http://localhost:5050";
 
+// The backend doesn't return Activity/Features tags yet — this frontend-only
+// mapping (mirrors the tag line shown on Quest Detail) is what the Filters
+// sheet's Activity/Features pills match against, since there's no other
+// source for that data.
+const tagsByQuestId = {
+  "greenwich-stroll": ["Walking", "Riverside", "Parks & Gardens", "Hidden History"],
+  "kyoto-garden-escape": ["Walking", "Garden", "Peaceful", "Nature"],
+  "thames-time-trail": ["Walking", "Riverside", "History", "Landmarks"],
+  "quiet-corners-southbank": ["Walking", "Hidden spots", "Riverside", "Independent places"],
+  "green-escape-city": ["Walking", "Parks & Gardens", "Royal park", "Relaxed"],
+};
+
 // The backend returns snake_case DB columns — map them to the shape
 // QuestCard/QuestMapView already expect, so those components don't need to change.
 function formatDuration(minutes) {
@@ -34,6 +46,7 @@ function normalizeQuest(apiQuest) {
     distance: formatDistance(apiQuest.distance_km),
     // MySQL DECIMAL columns come back as strings via mysql2 — coerce to
     // numbers so Leaflet and the distance math get real numbers, not "1.5".
+    distanceKm: Number(apiQuest.distance_km),
     routeKm: Number(apiQuest.distance_km),
     coordinates: { lat: Number(apiQuest.latitude), lng: Number(apiQuest.longitude) },
     accessibility: apiQuest.accessibility,
@@ -168,7 +181,7 @@ function FilterPill({ active, onClick, children }) {
 }
 
 // ── Range slider ──────────────────────────────────────────────────────────────
-function RangeSlider({ label, min, max, unit, value, onChange }) {
+function RangeSlider({ label, min, max, unit, value, onChange, step = 1 }) {
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div className="mt-4">
@@ -182,6 +195,7 @@ function RangeSlider({ label, min, max, unit, value, onChange }) {
           type="range"
           min={min}
           max={max}
+          step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
@@ -245,7 +259,7 @@ function DistanceSheet({ value, onChange, onClose, count }) {
     <Sheet onClose={onClose}>
       <div className="px-5 pb-6">
         <h2 className="text-[20px] font-bold text-[#2F2F2F]">Distance</h2>
-        <RangeSlider label="" min={0} max={15} unit="km" value={value} onChange={onChange} />
+        <RangeSlider label="" min={0} max={15} step={0.1} unit="km" value={value} onChange={onChange} />
         <button type="button" onClick={onClose} className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
           See {count} quest{count !== 1 ? "s" : ""}
         </button>
@@ -291,16 +305,37 @@ const accessibilityOpts = ["Step-free", "Pram Friendly", "Fully Paved"];
 const activityOpts      = ["Walking", "Cycling", "Public transport"];
 const featureOpts       = ["Street Art", "Hidden History", "Riverside", "Parks & Gardens", "Architecture", "Photo Spots", "Cafés Nearby"];
 
-function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
-  const [diff, setDiff]     = useState([]);
-  const [duration, setDuration] = useState(90);
-  const [distance, setDistance] = useState(15);
-  const [acc, setAcc]       = useState([]);
-  const [act, setAct]       = useState([]);
-  const [feat, setFeat]     = useState([]);
-
+function FiltersSheet({
+  onClose,
+  filteredCount,
+  myQ,
+  setMyQ,
+  difficulty,
+  setDifficulty,
+  duration,
+  setDuration,
+  distance,
+  setDistance,
+  accessibility,
+  setAccessibility,
+  activity,
+  setActivity,
+  features,
+  setFeatures,
+}) {
   function toggle(arr, setArr, val) {
     setArr((p) => p.includes(val) ? p.filter((v) => v !== val) : [...p, val]);
+  }
+
+  function clearAll() {
+    setDifficulty("All");
+    setDuration(120);
+    setDistance(15);
+    setAccessibility([]);
+    setActivity([]);
+    setFeatures([]);
+    setMyQ("All");
+    onClose();
   }
 
   return (
@@ -313,11 +348,11 @@ function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
         <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-none [&::-webkit-scrollbar]:hidden">
           <h2 className="mt-1 text-[22px] font-bold text-[#2F2F2F]">Filters</h2>
 
-          {/* Difficulty */}
+          {/* Difficulty — same single-select value as the Difficulty chip, so both stay in sync */}
           <p className="mt-5 text-[15px] font-semibold">Difficulty</p>
           <div className="mt-3 flex gap-2">
             {["Easy", "Moderate", "Tough"].map((d) => (
-              <FilterPill key={d} active={diff.includes(d)} onClick={() => toggle(diff, setDiff, d)}>
+              <FilterPill key={d} active={difficulty === d} onClick={() => setDifficulty(d === difficulty ? "All" : d)}>
                 <DifficultyIcon label={d} />{d}
               </FilterPill>
             ))}
@@ -327,13 +362,13 @@ function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
           <RangeSlider label="Duration" min={0} max={120} unit="min" value={duration} onChange={setDuration} />
 
           {/* Distance */}
-          <RangeSlider label="Distance" min={0} max={15} unit="km" value={distance} onChange={setDistance} />
+          <RangeSlider label="Distance" min={0} max={15} step={0.1} unit="km" value={distance} onChange={setDistance} />
 
           {/* Accessibility */}
           <p className="mt-5 text-[15px] font-semibold">Accessibility</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {accessibilityOpts.map((a) => (
-              <FilterPill key={a} active={acc.includes(a)} onClick={() => toggle(acc, setAcc, a)}>{a}</FilterPill>
+              <FilterPill key={a} active={accessibility.includes(a)} onClick={() => toggle(accessibility, setAccessibility, a)}>{a}</FilterPill>
             ))}
           </div>
 
@@ -341,7 +376,7 @@ function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
           <p className="mt-5 text-[15px] font-semibold">Activity</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {activityOpts.map((a) => (
-              <FilterPill key={a} active={act.includes(a)} onClick={() => toggle(act, setAct, a)}>{a}</FilterPill>
+              <FilterPill key={a} active={activity.includes(a)} onClick={() => toggle(activity, setActivity, a)}>{a}</FilterPill>
             ))}
           </div>
 
@@ -349,7 +384,7 @@ function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
           <p className="mt-5 text-[15px] font-semibold">Features</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {featureOpts.map((f) => (
-              <FilterPill key={f} active={feat.includes(f)} onClick={() => toggle(feat, setFeat, f)}>{f}</FilterPill>
+              <FilterPill key={f} active={features.includes(f)} onClick={() => toggle(features, setFeatures, f)}>{f}</FilterPill>
             ))}
           </div>
 
@@ -367,7 +402,7 @@ function FiltersSheet({ onClose, filteredCount, myQ, setMyQ }) {
         <div className="flex gap-3 border-t border-[#EDECE6] px-5 py-4 shrink-0">
           <button
             type="button"
-            onClick={() => { setMyQ("All"); onClose(); }}
+            onClick={clearAll}
             className="flex h-13.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]"
           >
             Clear all
@@ -445,6 +480,9 @@ export default function Explore() {
   const [sort, setSort]             = useState("Most relevant");
   const [duration, setDuration]     = useState(120);
   const [distance, setDistance]     = useState(15);
+  const [accessibility, setAccessibility] = useState([]);
+  const [activity, setActivity]     = useState([]);
+  const [features, setFeatures]     = useState([]);
   const [myQ, setMyQ]               = useState("All");
 
   const [quests, setQuests] = useState([]);
@@ -569,32 +607,79 @@ export default function Explore() {
       const text = `${q.title} ${q.location} ${q.description}`.toLowerCase();
       const matchesText = text.includes(query.toLowerCase());
 
+      // durationMin/distanceKm are the numeric values from the backend
+      // (duration_min/distance_km) — q.duration/q.distance are formatted
+      // display strings ("1h 30 min", "4.0 km") and aren't comparable.
+      const matchDuration = (q.durationMin ?? 0) <= duration;
+      const matchDistance = (q.distanceKm ?? 0) <= distance;
+
+      const matchAccessibility =
+        accessibility.length === 0 || accessibility.includes(q.accessibility);
+
+      // Activity/Features match against the same frontend-only tag list —
+      // case-insensitive since the tag data and the sheet's option labels
+      // don't always agree on capitalization (e.g. "Hidden history").
+      const tags = (tagsByQuestId[q.id] ?? []).map((t) => t.toLowerCase());
+      const matchActivity =
+        activity.length === 0 || activity.some((a) => tags.includes(a.toLowerCase()));
+      const matchFeatures =
+        features.length === 0 || features.some((f) => tags.includes(f.toLowerCase()));
+
       const isCompleted = q.completed || completedIds.includes(q.id);
       const matchMyQ =
         myQ === "All" || (myQ === "Completed" && isCompleted) || (myQ === "Not completed" && !isCompleted);
 
-      return matchDiff && matchesText && matchMyQ;
+      return (
+        matchDiff &&
+        matchesText &&
+        matchDuration &&
+        matchDistance &&
+        matchAccessibility &&
+        matchActivity &&
+        matchFeatures &&
+        matchMyQ
+      );
     });
 
+    let sorted = matches;
     if (sort === "Most popular") {
-      return [...matches].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
-    }
-    if (sort === "Newly added") {
-      return [...matches].sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
-    }
-    if (sort === "Closest") {
+      sorted = [...matches].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+    } else if (sort === "Newly added") {
+      sorted = [...matches].sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+    } else if (sort === "Closest") {
       const from = userLocation ?? (locationDenied ? DEFAULT_LOCATION : null);
       if (from) {
-        return [...matches].sort(
+        sorted = [...matches].sort(
           (a, b) =>
             haversineDistanceKm(from.lat, from.lng, a.coordinates.lat, a.coordinates.lng) -
             haversineDistanceKm(from.lat, from.lng, b.coordinates.lat, b.coordinates.lng)
         );
       }
     }
-    // "Most relevant" (default), or "Closest" while location is still loading.
-    return matches;
-  }, [quests, query, difficulty, myQ, sort, userLocation, locationDenied]);
+    // "Most relevant" (default), or "Closest" while location is still loading,
+    // both fall through with sorted === matches.
+
+    // Daily Quest leads the list for every sort except "Closest" — there,
+    // actual distance should win even if that's not today's daily quest.
+    if (sort === "Closest") return sorted;
+
+    const daily = sorted.filter((q) => q.isDaily);
+    const rest = sorted.filter((q) => !q.isDaily);
+    return [...daily, ...rest];
+  }, [
+    quests,
+    query,
+    difficulty,
+    duration,
+    distance,
+    accessibility,
+    activity,
+    features,
+    myQ,
+    sort,
+    userLocation,
+    locationDenied,
+  ]);
 
   const anySheetOpen = isFiltersOpen || isDiffOpen || isDurationOpen || isDistanceOpen || isSortOpen;
 
@@ -732,7 +817,11 @@ export default function Explore() {
           </div>
         )}
 
-        {!isLoading && !error && (
+        {!isLoading && !error && filtered.length === 0 && (
+          <p className="mt-8 text-center text-[14px] text-[#8A857D]">No quests found.</p>
+        )}
+
+        {!isLoading && !error && filtered.length > 0 && (
           <section className="mt-4 space-y-4">
             {filtered.map((quest, i) => (
               <QuestCard
@@ -770,7 +859,26 @@ export default function Explore() {
       )}
 
       {/* Sheets */}
-      {isFiltersOpen   && <FiltersSheet onClose={() => setIsFiltersOpen(false)} filteredCount={filtered.length} myQ={myQ} setMyQ={setMyQ} />}
+      {isFiltersOpen   && (
+        <FiltersSheet
+          onClose={() => setIsFiltersOpen(false)}
+          filteredCount={filtered.length}
+          myQ={myQ}
+          setMyQ={setMyQ}
+          difficulty={difficulty}
+          setDifficulty={setDifficulty}
+          duration={duration}
+          setDuration={setDuration}
+          distance={distance}
+          setDistance={setDistance}
+          accessibility={accessibility}
+          setAccessibility={setAccessibility}
+          activity={activity}
+          setActivity={setActivity}
+          features={features}
+          setFeatures={setFeatures}
+        />
+      )}
       {isDiffOpen      && <DifficultySheet selected={difficulty} onChange={setDifficulty} onClose={() => setIsDiffOpen(false)} count={filtered.length} />}
       {isDurationOpen  && <DurationSheet value={duration} onChange={setDuration} onClose={() => setIsDurationOpen(false)} count={filtered.length} />}
       {isDistanceOpen  && <DistanceSheet value={distance} onChange={setDistance} onClose={() => setIsDistanceOpen(false)} count={filtered.length} />}
