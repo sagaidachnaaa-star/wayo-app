@@ -4,6 +4,7 @@ const cors = require("cors");
 const pool = require("./db/connection");
 const questsRouter = require("./routes/quests");
 const savedRouter = require("./routes/saved");
+const completedRouter = require("./routes/completed");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,9 @@ app.use("/api/quests", questsRouter);
 
 // Saved quests (single demo user, no auth yet)
 app.use("/api/saved", savedRouter);
+
+// Completed quests / Passport (single demo user, no auth yet)
+app.use("/api/completed", completedRouter);
 
 app.listen(PORT, () => {
   console.log(`WAYO backend running on http://localhost:${PORT}`);

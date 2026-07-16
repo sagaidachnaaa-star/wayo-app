@@ -4,13 +4,32 @@ import { quests } from "../data/quests";
 import { questDetails } from "../data/questDetails";
 import { saveCompletedQuest } from "../utils/questProgress";
 
+const API_URL = "http://localhost:5050";
+
+// Real per-quest badge art in public/assets — same mapping Passport uses,
+// since questDetails only has unlocked artwork for 2 of the 5 quests.
+const badgeImageOverrides = {
+  "greenwich-stroll": "/assets/GreenwichStrollReward.png",
+  "kyoto-garden-escape": "/assets/badge1.png",
+  "thames-time-trail": "/assets/thames-trail-badge.png",
+  "quiet-corners-southbank": "/assets/Southbank-badge.png",
+  "green-escape-city": "/assets/GreenEscapeintheCity.png",
+};
+
 export default function QuestComplete() {
   const { id } = useParams();
   const navigate = useNavigate();
   const quest = quests.find((q) => q.id === id);
 
   useEffect(() => {
-    if (quest) saveCompletedQuest(quest.id);
+    if (!quest) return;
+    // Kept as a fallback record — MySQL (via the POST below) is now the
+    // real source of truth for Passport, not this localStorage entry.
+    saveCompletedQuest(quest.id);
+
+    fetch(`${API_URL}/api/completed/${quest.id}`, { method: "POST" }).catch(() => {
+      console.error("Failed to sync quest completion with the backend");
+    });
   }, [quest]);
 
   if (!quest) {
@@ -22,7 +41,8 @@ export default function QuestComplete() {
   }
 
   const detail = questDetails[quest.id];
-  const badgeImage = detail?.badge?.unlockedImage ?? detail?.badge?.image ?? quest.image;
+  const badgeImage =
+    badgeImageOverrides[quest.id] ?? detail?.badge?.unlockedImage ?? detail?.badge?.image ?? quest.image;
 
   return (
     <main className="flex h-full flex-col items-center overflow-y-auto bg-[#F8F7F4] px-6 pb-8 pt-16 text-center text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">

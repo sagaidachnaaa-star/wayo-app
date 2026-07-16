@@ -1,9 +1,19 @@
-import { quests } from "../data/quests";
+import { useEffect, useMemo, useState } from "react";
 import { questDetails } from "../data/questDetails";
-import { getCompletedQuests } from "../utils/questProgress";
 import lockedBadge from "../assets/Locked.png";
 
+const API_URL = "http://localhost:5050";
 const city = "London";
+
+// Real per-quest colour badge art already placed in public/assets — same
+// mapping Quest Detail uses, so the two pages stay visually consistent.
+const badgeImageOverrides = {
+  "greenwich-stroll": "/assets/GreenwichStrollReward.png",
+  "kyoto-garden-escape": "/assets/badge1.png",
+  "thames-time-trail": "/assets/thames-trail-badge.png",
+  "quiet-corners-southbank": "/assets/Southbank-badge.png",
+  "green-escape-city": "/assets/GreenEscapeintheCity.png",
+};
 
 function FlagIcon() {
   return (
@@ -39,33 +49,99 @@ function StatCard({ icon, label, value, total }) {
   );
 }
 
-// A quest counts as completed if it was seeded that way in quests.js, or if
-// the user finished it in this session (stored in localStorage, no backend yet).
-function isQuestCompleted(quest, completedIds) {
-  return quest.completed || completedIds.includes(quest.id);
-}
-
 // "Places discovered" is approximated as the number of stops across
 // completed quests — there's no separate places dataset in this MVP.
+// This still reads the local route data (unrelated to completion status).
 function countStops(quest) {
   return questDetails[quest.id]?.route?.stops?.length ?? 0;
 }
 
 export default function Passport() {
-  const completedIds = getCompletedQuests();
-  const completedQuests = quests.filter((q) => isQuestCompleted(q, completedIds));
-  const lockedQuests = quests.filter((q) => !isQuestCompleted(q, completedIds));
+  const [allQuests, setAllQuests] = useState([]);
+  const [completedQuests, setCompletedQuests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const placesDiscovered = completedQuests.reduce((sum, q) => sum + countStops(q), 0);
-  const totalPlaces = quests.reduce((sum, q) => sum + countStops(q), 0);
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      fetch(`${API_URL}/api/quests`).then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      }),
+      fetch(`${API_URL}/api/completed`).then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        return res.json();
+      }),
+    ])
+      .then(([questsData, completedData]) => {
+        if (cancelled) return;
+        setAllQuests(questsData);
+        setCompletedQuests(completedData);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.message || "Something went wrong loading your progress.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryCount]);
+
+  const completedById = useMemo(() => {
+    const map = {};
+    completedQuests.forEach((q) => {
+      map[q.id] = q;
+    });
+    return map;
+  }, [completedQuests]);
+
+  const collected = allQuests.filter((q) => completedById[q.id]);
+  const locked = allQuests.filter((q) => !completedById[q.id]);
+
+  const placesDiscovered = collected.reduce((sum, q) => sum + countStops(q), 0);
+  const totalPlaces = allQuests.reduce((sum, q) => sum + countStops(q), 0);
   const pct = totalPlaces > 0 ? Math.round((placesDiscovered / totalPlaces) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
+        <p>Loading your progress…</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="flex h-full flex-col items-center justify-center gap-3 bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
+        <p className="text-[14px] text-[#8A857D]">Couldn't load your progress. {error}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            setRetryCount((c) => c + 1);
+          }}
+          className="rounded-full bg-[#15A963] px-5 py-2.5 text-[14px] font-semibold text-white"
+        >
+          Try again
+        </button>
+      </main>
+    );
+  }
 
   return (
     <main className="h-full overflow-y-auto bg-[#F8F7F4] px-4 pb-6 text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">
       <h1 className="pt-2 text-[26px] font-bold">Personal Progress</h1>
 
       <div className="mt-4 flex gap-3">
-        <StatCard icon={<FlagIcon />} label="Quests completed" value={completedQuests.length} total={quests.length} />
+        <StatCard icon={<FlagIcon />} label="Quests completed" value={collected.length} total={allQuests.length} />
         <StatCard icon={<LocationPinIcon />} label="Places discovered" value={placesDiscovered} total={totalPlaces} />
       </div>
 
@@ -83,13 +159,21 @@ export default function Passport() {
 
       <h2 className="mt-6 text-[20px] font-bold">Collected</h2>
       <div className="mt-3 grid grid-cols-3 gap-4">
-        {completedQuests.map((quest) => {
-          const badge = questDetails[quest.id]?.badge;
-          const badgeImage = badge?.unlockedImage ?? badge?.image ?? quest.image;
+        {collected.map((quest) => {
+          const badgeImage =
+            badgeImageOverrides[quest.id] ?? completedById[quest.id]?.badge_image_url ?? quest.image_url;
           return (
             <div key={quest.id} className="flex flex-col items-center text-center">
               <div className="flex h-32 w-32 items-center justify-center">
-                <img src={badgeImage} alt={quest.title} className="h-full w-full object-contain" />
+                <img
+                  src={badgeImage}
+                  alt={quest.title}
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = lockedBadge;
+                  }}
+                />
               </div>
               <p className="mt-2 text-[13px] font-semibold leading-tight">{quest.title}</p>
             </div>
@@ -100,7 +184,7 @@ export default function Passport() {
       <h2 className="mt-6 text-[20px] font-bold">Locked</h2>
       <p className="mt-0.5 text-[13px] text-[#8A857D]">Complete more to unlock</p>
       <div className="mt-3 grid grid-cols-3 gap-4">
-        {lockedQuests.map((quest) => (
+        {locked.map((quest) => (
           <div key={quest.id} className="flex flex-col items-center text-center">
             <div className="flex h-32 w-32 items-center justify-center">
               <img src={lockedBadge} alt="Locked" className="h-full w-full object-contain" />

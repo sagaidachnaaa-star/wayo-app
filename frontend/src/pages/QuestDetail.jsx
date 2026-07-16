@@ -118,8 +118,8 @@ const badgeImageOverrides = {
   "greenwich-stroll": "/assets/GreenwichStrollReward.png",
   "kyoto-garden-escape": "/assets/badge1.png",
   "thames-time-trail": "/assets/thames-trail-badge.png",
-  "quiet-corners-southbank": "/assets/QuiteCornersofSouthbank.png",
-  "green-escape-city": "/assets/GreenEscapeinCity.png",
+  "quiet-corners-southbank": "/assets/Southbank-badge.png",
+  "green-escape-city": "/assets/GreenEscapeintheCity.png",
 };
 
 // The API only returns title/text for accessibility notes, no icon — pick a
