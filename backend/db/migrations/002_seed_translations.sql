@@ -1,6 +1,6 @@
 -- Seed data: English + Ukrainian interface translations for every screen.
 
-USE wayo_db;
+USE railway;
 
 INSERT INTO translations (translation_key, language_code, content) VALUES
   -- Bottom navigation

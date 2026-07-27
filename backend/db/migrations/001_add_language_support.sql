@@ -1,4 +1,4 @@
-USE wayo_db;
+USE railway;
 
 -- 1. Languages available in the app.
 CREATE TABLE IF NOT EXISTS languages (

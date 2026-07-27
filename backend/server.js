@@ -11,18 +11,19 @@ const languagesRouter = require("./routes/languages");
 const translationsRouter = require("./routes/translations");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050;
 
-// Local development only: allow the Vite dev server whether it's opened via
+// Local development: allow the Vite dev server whether it's opened via
 // localhost or the Mac's LAN IP, so the app also works from a phone on the
-// same Wi-Fi network.
+// same Wi-Fi network. In production (Railway), FRONTEND_URL is also allowed
+// so the deployed frontend can reach this backend.
 const allowedOriginPattern =
   /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOriginPattern.test(origin)) {
+      if (!origin || allowedOriginPattern.test(origin) || origin === process.env.FRONTEND_URL) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

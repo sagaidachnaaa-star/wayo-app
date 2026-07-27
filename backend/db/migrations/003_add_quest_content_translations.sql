@@ -1,4 +1,4 @@
-USE wayo_db;
+USE railway;
 
 -- Quest title / short description (quests.description) / full overview
 -- (quests.overview) / location label.

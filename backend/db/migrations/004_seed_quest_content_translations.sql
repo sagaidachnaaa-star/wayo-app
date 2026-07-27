@@ -1,4 +1,4 @@
-USE wayo_db;
+USE railway;
 
 -- ── Quests ──────────────────────────────────────────────────────────────────
 INSERT INTO quest_translations (quest_id, language_code, title, location, short_description, full_description) VALUES
