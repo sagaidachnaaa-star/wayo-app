@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import BackButton from "../components/BackButton";
+import { LanguageContext } from "../context/LanguageContext";
 
 function Switch({ checked, onChange }) {
   return (
@@ -31,6 +32,7 @@ function NotificationRow({ title, description, checked, onChange, last }) {
 }
 
 export default function Notifications() {
+  const { t } = useContext(LanguageContext);
   const [prefs, setPrefs] = useState({ nearby: true, reminders: true, digest: false });
 
   function toggle(key) {
@@ -40,25 +42,25 @@ export default function Notifications() {
   return (
     <main className="h-full overflow-y-auto bg-[#F8F7F4] px-5 pb-6 text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">
       <BackButton className="mt-2" />
-      <h1 className="mt-6 text-[24px] font-bold">Notifications</h1>
-      <p className="mt-1 text-[14px] text-[#8A857D]">Choose what you want to hear about.</p>
+      <h1 className="mt-6 text-[24px] font-bold">{t("notificationsPage.title", "Notifications")}</h1>
+      <p className="mt-1 text-[14px] text-[#8A857D]">{t("notificationsPage.subtitle", "Choose what you want to hear about.")}</p>
 
       <div className="mt-5">
         <NotificationRow
-          title="New quests nearby"
-          description="Get notified when a new quest launches near you."
+          title={t("notificationsPage.nearbyTitle", "New quests nearby")}
+          description={t("notificationsPage.nearbyDesc", "Get notified when a new quest launches near you.")}
           checked={prefs.nearby}
           onChange={() => toggle("nearby")}
         />
         <NotificationRow
-          title="Quest reminders"
-          description="A nudge if you leave a quest unfinished."
+          title={t("notificationsPage.remindersTitle", "Quest reminders")}
+          description={t("notificationsPage.remindersDesc", "A nudge if you leave a quest unfinished.")}
           checked={prefs.reminders}
           onChange={() => toggle("reminders")}
         />
         <NotificationRow
-          title="Weekly digest"
-          description="A weekly summary of your progress and new spots to explore."
+          title={t("notificationsPage.digestTitle", "Weekly digest")}
+          description={t("notificationsPage.digestDesc", "A weekly summary of your progress and new spots to explore.")}
           checked={prefs.digest}
           onChange={() => toggle("digest")}
           last

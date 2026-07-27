@@ -5,17 +5,23 @@ const pool = require("../db/connection");
 // MVP has a single demo user — no login/auth yet.
 const DEMO_USER_ID = 1;
 
+function normalizeLang(lang) {
+  return lang === "uk" ? "uk" : "en";
+}
+
 // GET /api/completed — all quests the demo user has completed, with badge info
 router.get("/", async (req, res) => {
+  const lang = normalizeLang(req.query.lang);
+
   try {
     const [rows] = await pool.query(
       `
       SELECT
         q.id,
-        q.title,
-        q.location,
-        q.description,
-        q.overview,
+        COALESCE(qt.title, q.title) AS title,
+        COALESCE(qt.location, q.location) AS location,
+        COALESCE(qt.short_description, q.description) AS description,
+        COALESCE(qt.full_description, q.overview) AS overview,
         q.difficulty,
         q.duration_min,
         q.distance_km,
@@ -25,16 +31,18 @@ router.get("/", async (req, res) => {
         q.longitude,
         q.is_daily,
         cq.completed_at,
-        b.title AS badge_title,
-        b.description AS badge_description,
+        COALESCE(bt.title, b.title) AS badge_title,
+        COALESCE(bt.description, b.description) AS badge_description,
         b.image_url AS badge_image_url
       FROM completed_quests cq
       JOIN quests q ON q.id = cq.quest_id
+      LEFT JOIN quest_translations qt ON qt.quest_id = q.id AND qt.language_code = ?
       LEFT JOIN badges b ON b.quest_id = q.id
+      LEFT JOIN badge_translations bt ON bt.badge_id = b.id AND bt.language_code = ?
       WHERE cq.user_id = ?
       ORDER BY cq.completed_at DESC
       `,
-      [DEMO_USER_ID]
+      [lang, lang, DEMO_USER_ID]
     );
 
     res.json(rows);

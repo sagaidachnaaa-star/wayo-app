@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS saved_quests;
 DROP TABLE IF EXISTS badges;
 DROP TABLE IF EXISTS quest_accessibility_notes;
 DROP TABLE IF EXISTS quest_stops;
+DROP TABLE IF EXISTS quest_tags;
+DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS quests;
 DROP TABLE IF EXISTS users;
 
@@ -121,4 +123,25 @@ CREATE TABLE reported_issues (
     CONSTRAINT fk_reports_quest
         FOREIGN KEY (quest_id) REFERENCES quests(id)
         ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9. Tags (Activity/Features tags shown on Quest Detail and used by Explore filters)
+CREATE TABLE tags (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    type VARCHAR(50) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10. Quest tags (many-to-many link between quests and tags)
+CREATE TABLE quest_tags (
+    quest_id VARCHAR(100) NOT NULL,
+    tag_id INT NOT NULL,
+    PRIMARY KEY (quest_id, tag_id),
+    CONSTRAINT fk_quest_tags_quest
+        FOREIGN KEY (quest_id) REFERENCES quests(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_quest_tags_tag
+        FOREIGN KEY (tag_id) REFERENCES tags(id)
+        ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

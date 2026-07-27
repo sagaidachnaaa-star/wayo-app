@@ -1,5 +1,7 @@
+import { useContext } from "react";
 import { useNavigate } from "react-router";
 import BackButton from "../components/BackButton";
+import { LanguageContext } from "../context/LanguageContext";
 
 function MailIcon() {
   return (
@@ -24,12 +26,15 @@ function ChatIcon() {
 
 export default function ContactSupport() {
   const navigate = useNavigate();
+  const { t } = useContext(LanguageContext);
 
   return (
     <main className="h-full overflow-y-auto bg-[#F8F7F4] px-5 pb-6 text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">
       <BackButton className="mt-2" />
-      <h1 className="mt-6 text-[24px] font-bold">Contact support</h1>
-      <p className="mt-1 text-[14px] text-[#8A857D]">Get help with app questions, account settings, or general feedback.</p>
+      <h1 className="mt-6 text-[24px] font-bold">{t("contactSupport.title", "Contact support")}</h1>
+      <p className="mt-1 text-[14px] text-[#8A857D]">
+        {t("contactSupport.subtitle", "Get help with app questions, account settings, or general feedback.")}
+      </p>
 
       <div className="mt-5 space-y-3">
         <a
@@ -40,7 +45,7 @@ export default function ContactSupport() {
             <MailIcon />
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-[#2F2F2F]">Email us</p>
+            <p className="text-[15px] font-semibold text-[#2F2F2F]">{t("contactSupport.emailUs", "Email us")}</p>
             <p className="text-[13px] text-[#8A857D]">support@wayoapp.com</p>
           </div>
         </a>
@@ -50,14 +55,17 @@ export default function ContactSupport() {
             <ChatIcon />
           </div>
           <div>
-            <p className="text-[15px] font-semibold text-[#2F2F2F]">Support type</p>
-            <p className="text-[13px] text-[#8A857D]">General app questions and feedback</p>
+            <p className="text-[15px] font-semibold text-[#2F2F2F]">{t("contactSupport.supportType", "Support type")}</p>
+            <p className="text-[13px] text-[#8A857D]">{t("contactSupport.supportTypeDesc", "General app questions and feedback")}</p>
           </div>
         </div>
       </div>
 
       <p className="mt-5 text-[14px] leading-normalll text-[#8A857D]">
-        For safety concerns about a specific route, please use "Report a problem" so the issue can be reviewed more clearly.
+        {t(
+          "contactSupport.footerNote",
+          'For safety concerns about a specific route, please use "Report a problem" so the issue can be reviewed more clearly.'
+        )}
       </p>
 
       <button
@@ -65,7 +73,7 @@ export default function ContactSupport() {
         onClick={() => navigate("/profile/settings/report-problem")}
         className="mt-4 flex h-13.5 w-full items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F]"
       >
-        Report a problem
+        {t("settings.reportProblem", "Report a problem")}
       </button>
     </main>
   );

@@ -1,18 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import QuestCard from "../components/QuestCard";
 import QuestMapView from "../components/QuestMapView";
 import { getCompletedQuests } from "../utils/questProgress";
 import { haversineDistanceKm } from "../utils/geo";
+import { API_URL } from "../config/api";
+import { LanguageContext } from "../context/LanguageContext";
+import {
+  activityKeyMap,
+  difficultyKeyMap,
+  myQuestsKeyMap,
+  preferenceKeyMap,
+  questAccessibilityKeyMap,
+  sortKeyMap,
+  translateLabel,
+} from "../i18n/labelKeys";
 
 // Used for "Closest" sorting if the user denies/lacks geolocation.
 const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
 
-const API_URL = "http://localhost:5050";
-
-// The backend doesn't return Activity/Features tags yet — this frontend-only
-// mapping (mirrors the tag line shown on Quest Detail) is what the Filters
-// sheet's Activity/Features pills match against, since there's no other
-// source for that data.
+// Fallback only — used if a quest has no tags from the backend yet.
+// Mirrors the tag line shown on Quest Detail.
 const tagsByQuestId = {
   "greenwich-stroll": ["Walking", "Riverside", "Parks & Gardens", "Hidden History"],
   "kyoto-garden-escape": ["Walking", "Garden", "Peaceful", "Nature"],
@@ -52,6 +59,7 @@ function normalizeQuest(apiQuest) {
     accessibility: apiQuest.accessibility,
     image: apiQuest.image_url,
     isDaily: Boolean(apiQuest.is_daily),
+    tags: apiQuest.tags ?? [],
     // Real completion state comes from localStorage (see questProgress.js),
     // not the API yet — the backend doesn't track that per-user field.
     completed: false,
@@ -62,7 +70,7 @@ function normalizeQuest(apiQuest) {
 
 function SearchIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <circle cx="11" cy="11" r="7" stroke="#15A963" strokeWidth="2" />
       <path d="m16.5 16.5 4 4" stroke="#15A963" strokeWidth="2" strokeLinecap="round" />
     </svg>
@@ -70,28 +78,28 @@ function SearchIcon() {
 }
 function BackIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="#15A963" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function FilterIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4.5 w-4.5 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none">
       <path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
 function ChevronDown() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+    <svg className="h-3.5 w-3.5 md:h-3.25 md:w-3.25" viewBox="0 0 24 24" fill="none">
       <path d="m7 10 5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
 function MapFabIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg className="h-6 w-6 md:h-5.5 md:w-5.5" viewBox="0 0 24 24" fill="none">
       <path d="m9 18-6 3V6l6-3 6 3 6-3v15l-6 3-6-3Z" stroke="white" strokeWidth="2" strokeLinejoin="round" />
       <path d="M9 3v15M15 6v15" stroke="white" strokeWidth="2" />
     </svg>
@@ -99,18 +107,18 @@ function MapFabIcon() {
 }
 function LocationArrow() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <path d="M12 2L19 21L12 17L5 21L12 2Z" stroke="#15A963" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
 }
 
 // ── Difficulty badge shapes ───────────────────────────────────────────────────
-function EasyDot()     { return <span className="h-3.25 w-3.25 rounded-full bg-[#15A963] shrink-0" />; }
-function ModerateDot() { return <span className="h-2.75 w-2.75 rounded-xs bg-[#F6CA5D] shrink-0" />; }
+function EasyDot()     { return <span className="h-3.5 w-3.5 rounded-full bg-[#15A963] shrink-0 md:h-3.25 md:w-3.25" />; }
+function ModerateDot() { return <span className="h-3 w-3 rounded-xs bg-[#F6CA5D] shrink-0 md:h-2.75 md:w-2.75" />; }
 function ToughDot()    {
   return (
-    <span className="shrink-0 h-0 w-0" style={{ borderLeft:"7px solid transparent", borderRight:"7px solid transparent", borderBottom:"13px solid #D44A08" }} />
+    <span className="shrink-0 h-0 w-0" style={{ borderLeft:"7.5px solid transparent", borderRight:"7.5px solid transparent", borderBottom:"14px solid #D44A08" }} />
   );
 }
 function DifficultyIcon({ label }) {
@@ -151,9 +159,10 @@ function useDragScroll() {
 
 // ── Sheet wrapper ─────────────────────────────────────────────────────────────
 function Sheet({ onClose, children }) {
+  const { t } = useContext(LanguageContext);
   return (
     <>
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
+      <button type="button" aria-label={t("common.close", "Close")} onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
       <div className="absolute bottom-0 left-0 right-0 z-50 rounded-t-[28px] bg-white">
         <div className="flex justify-center pt-3 pb-2">
           <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
@@ -171,7 +180,7 @@ function FilterPill({ active, onClick, children }) {
       type="button"
       onClick={onClick}
       className={[
-        "flex h-10.5 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors",
+        "flex h-11.25 shrink-0 items-center gap-2 rounded-full border px-4.5 text-[15px] font-medium transition-colors md:h-10.5 md:px-4 md:text-[14px]",
         active ? "border-[#15A963] bg-[#E7F5EF] text-[#2F2F2F]" : "border-[#E5E3DC] bg-white text-[#2F2F2F]",
       ].join(" ")}
     >
@@ -186,8 +195,8 @@ function RangeSlider({ label, min, max, unit, value, onChange, step = 1 }) {
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between">
-        <p className="text-[15px] font-semibold text-[#2F2F2F]">{label}</p>
-        <p className="text-[13px] text-[#8A857D]">{min}-{value} {unit}</p>
+        <p className="text-[16px] font-semibold text-[#2F2F2F] md:text-[15px]">{label}</p>
+        <p className="text-[14px] text-[#8A857D] md:text-[13px]">{min}-{value} {unit}</p>
       </div>
       <div className="relative mt-3 h-1 rounded-full bg-[#E5E3DC]">
         <div className="absolute left-0 top-0 h-full rounded-full bg-[#15A963]" style={{ width: `${pct}%` }} />
@@ -203,7 +212,7 @@ function RangeSlider({ label, min, max, unit, value, onChange, step = 1 }) {
         />
         {/* thumb */}
         <div
-          className="pointer-events-none absolute top-1/2 h-6.5 w-6.5 -translate-y-1/2 -translate-x-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+          className="pointer-events-none absolute top-1/2 h-7 w-7 -translate-y-1/2 -translate-x-1/2 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.18)] md:h-6.5 md:w-6.5"
           style={{ left: `${pct}%` }}
         />
       </div>
@@ -213,25 +222,26 @@ function RangeSlider({ label, min, max, unit, value, onChange, step = 1 }) {
 
 // ── Difficulty sheet ──────────────────────────────────────────────────────────
 function DifficultySheet({ selected, onChange, onClose, count }) {
+  const { t } = useContext(LanguageContext);
   const options = ["Easy", "Moderate", "Tough"];
   return (
     <Sheet onClose={onClose}>
-      <div className="px-5 pb-6">
-        <h2 className="text-[20px] font-bold text-[#2F2F2F]">Difficulty</h2>
+      <div className="px-5.5 pb-6 md:px-5">
+        <h2 className="text-[22px] font-bold text-[#2F2F2F] md:text-[20px]">{t("explore.difficulty", "Difficulty")}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {options.map((d) => (
             <FilterPill key={d} active={selected === d} onClick={() => onChange(d === selected ? "All" : d)}>
               <DifficultyIcon label={d} />
-              {d}
+              {translateLabel(t, difficultyKeyMap, d)}
             </FilterPill>
           ))}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="mt-5 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white"
+          className="mt-5 flex h-14.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[17px] font-semibold text-white md:h-13.5 md:text-[16px]"
         >
-          See {count} quest{count !== 1 ? "s" : ""}
+          {t("explore.seeResults", "See")} {count} {count !== 1 ? t("explore.questPlural", "quests") : t("explore.questSingular", "quest")}
         </button>
       </div>
     </Sheet>
@@ -240,13 +250,14 @@ function DifficultySheet({ selected, onChange, onClose, count }) {
 
 // ── Duration sheet ────────────────────────────────────────────────────────────
 function DurationSheet({ value, onChange, onClose, count }) {
+  const { t } = useContext(LanguageContext);
   return (
     <Sheet onClose={onClose}>
-      <div className="px-5 pb-6">
-        <h2 className="text-[20px] font-bold text-[#2F2F2F]">Duration</h2>
-        <RangeSlider label="" min={0} max={120} unit="min" value={value} onChange={onChange} />
-        <button type="button" onClick={onClose} className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
-          See {count} quest{count !== 1 ? "s" : ""}
+      <div className="px-5.5 pb-6 md:px-5">
+        <h2 className="text-[22px] font-bold text-[#2F2F2F] md:text-[20px]">{t("explore.duration", "Duration")}</h2>
+        <RangeSlider label="" min={0} max={120} unit={t("common.min", "min")} value={value} onChange={onChange} />
+        <button type="button" onClick={onClose} className="mt-6 flex h-14.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[17px] font-semibold text-white md:h-13.5 md:text-[16px]">
+          {t("explore.seeResults", "See")} {count} {count !== 1 ? t("explore.questPlural", "quests") : t("explore.questSingular", "quest")}
         </button>
       </div>
     </Sheet>
@@ -255,13 +266,14 @@ function DurationSheet({ value, onChange, onClose, count }) {
 
 // ── Distance sheet ────────────────────────────────────────────────────────────
 function DistanceSheet({ value, onChange, onClose, count }) {
+  const { t } = useContext(LanguageContext);
   return (
     <Sheet onClose={onClose}>
-      <div className="px-5 pb-6">
-        <h2 className="text-[20px] font-bold text-[#2F2F2F]">Distance</h2>
-        <RangeSlider label="" min={0} max={15} step={0.1} unit="km" value={value} onChange={onChange} />
-        <button type="button" onClick={onClose} className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white">
-          See {count} quest{count !== 1 ? "s" : ""}
+      <div className="px-5.5 pb-6 md:px-5">
+        <h2 className="text-[22px] font-bold text-[#2F2F2F] md:text-[20px]">{t("explore.distance", "Distance")}</h2>
+        <RangeSlider label="" min={0} max={15} step={0.1} unit={t("common.km", "km")} value={value} onChange={onChange} />
+        <button type="button" onClick={onClose} className="mt-6 flex h-14.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[17px] font-semibold text-white md:h-13.5 md:text-[16px]">
+          {t("explore.seeResults", "See")} {count} {count !== 1 ? t("explore.questPlural", "quests") : t("explore.questSingular", "quest")}
         </button>
       </div>
     </Sheet>
@@ -276,10 +288,11 @@ const sortOptions = [
   { label: "Newly added" },
 ];
 function SortSheet({ selected, onChange, onClose }) {
+  const { t } = useContext(LanguageContext);
   return (
     <Sheet onClose={onClose}>
-      <div className="px-5 pb-6">
-        <h2 className="text-[20px] font-bold text-[#2F2F2F]">Sort</h2>
+      <div className="px-5.5 pb-6 md:px-5">
+        <h2 className="text-[22px] font-bold text-[#2F2F2F] md:text-[20px]">{t("explore.sort", "Sort")}</h2>
         <div className="mt-4 space-y-2">
           {sortOptions.map((o) => (
             <button
@@ -287,11 +300,11 @@ function SortSheet({ selected, onChange, onClose }) {
               type="button"
               onClick={() => { onChange(o.label); onClose(); }}
               className={[
-                "flex h-13 w-full items-center rounded-full px-5 text-[15px] font-medium",
+                "flex h-14 w-full items-center rounded-full px-5.5 text-[16px] font-medium md:h-13 md:px-5 md:text-[15px]",
                 selected === o.label ? "bg-[#E7F5EF] text-[#2F2F2F]" : "bg-[#F4F2EE] text-[#2F2F2F]",
               ].join(" ")}
             >
-              {o.label}
+              {translateLabel(t, sortKeyMap, o.label)}
             </button>
           ))}
         </div>
@@ -323,6 +336,8 @@ function FiltersSheet({
   features,
   setFeatures,
 }) {
+  const { t } = useContext(LanguageContext);
+
   function toggle(arr, setArr, val) {
     setArr((p) => p.includes(val) ? p.filter((v) => v !== val) : [...p, val]);
   }
@@ -340,75 +355,75 @@ function FiltersSheet({
 
   return (
     <>
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
+      <button type="button" aria-label={t("common.close", "Close")} onClick={onClose} className="absolute inset-0 z-40 bg-black/20" />
       <div className="absolute bottom-0 left-0 right-0 z-50 flex max-h-[88%] flex-col rounded-t-[28px] bg-white">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-4 scrollbar-none [&::-webkit-scrollbar]:hidden">
-          <h2 className="mt-1 text-[22px] font-bold text-[#2F2F2F]">Filters</h2>
+        <div className="flex-1 overflow-y-auto px-5.5 pb-4 scrollbar-none [&::-webkit-scrollbar]:hidden md:px-5">
+          <h2 className="mt-1 text-[24px] font-bold text-[#2F2F2F] md:text-[22px]">{t("explore.filters", "Filters")}</h2>
 
           {/* Difficulty — same single-select value as the Difficulty chip, so both stay in sync */}
-          <p className="mt-5 text-[15px] font-semibold">Difficulty</p>
+          <p className="mt-5 text-[16px] font-semibold md:text-[15px]">{t("explore.difficulty", "Difficulty")}</p>
           <div className="mt-3 flex gap-2">
             {["Easy", "Moderate", "Tough"].map((d) => (
               <FilterPill key={d} active={difficulty === d} onClick={() => setDifficulty(d === difficulty ? "All" : d)}>
-                <DifficultyIcon label={d} />{d}
+                <DifficultyIcon label={d} />{translateLabel(t, difficultyKeyMap, d)}
               </FilterPill>
             ))}
           </div>
 
           {/* Duration */}
-          <RangeSlider label="Duration" min={0} max={120} unit="min" value={duration} onChange={setDuration} />
+          <RangeSlider label={t("explore.duration", "Duration")} min={0} max={120} unit={t("common.min", "min")} value={duration} onChange={setDuration} />
 
           {/* Distance */}
-          <RangeSlider label="Distance" min={0} max={15} step={0.1} unit="km" value={distance} onChange={setDistance} />
+          <RangeSlider label={t("explore.distance", "Distance")} min={0} max={15} step={0.1} unit={t("common.km", "km")} value={distance} onChange={setDistance} />
 
           {/* Accessibility */}
-          <p className="mt-5 text-[15px] font-semibold">Accessibility</p>
+          <p className="mt-5 text-[16px] font-semibold md:text-[15px]">{t("quest.accessibility", "Accessibility")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {accessibilityOpts.map((a) => (
-              <FilterPill key={a} active={accessibility.includes(a)} onClick={() => toggle(accessibility, setAccessibility, a)}>{a}</FilterPill>
+              <FilterPill key={a} active={accessibility.includes(a)} onClick={() => toggle(accessibility, setAccessibility, a)}>{translateLabel(t, questAccessibilityKeyMap, a)}</FilterPill>
             ))}
           </div>
 
           {/* Activity */}
-          <p className="mt-5 text-[15px] font-semibold">Activity</p>
+          <p className="mt-5 text-[16px] font-semibold md:text-[15px]">{t("explore.activity", "Activity")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {activityOpts.map((a) => (
-              <FilterPill key={a} active={activity.includes(a)} onClick={() => toggle(activity, setActivity, a)}>{a}</FilterPill>
+              <FilterPill key={a} active={activity.includes(a)} onClick={() => toggle(activity, setActivity, a)}>{translateLabel(t, activityKeyMap, a)}</FilterPill>
             ))}
           </div>
 
           {/* Features */}
-          <p className="mt-5 text-[15px] font-semibold">Features</p>
+          <p className="mt-5 text-[16px] font-semibold md:text-[15px]">{t("explore.features", "Features")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {featureOpts.map((f) => (
-              <FilterPill key={f} active={features.includes(f)} onClick={() => toggle(features, setFeatures, f)}>{f}</FilterPill>
+              <FilterPill key={f} active={features.includes(f)} onClick={() => toggle(features, setFeatures, f)}>{translateLabel(t, preferenceKeyMap, f)}</FilterPill>
             ))}
           </div>
 
           {/* My Quests */}
-          <p className="mt-5 text-[15px] font-semibold">My Quests</p>
+          <p className="mt-5 text-[16px] font-semibold md:text-[15px]">{t("explore.myQuests", "My Quests")}</p>
           <div className="mt-3 flex overflow-hidden rounded-full border border-[#E5E3DC]">
             {["All", "Completed", "Not completed"].map((q) => (
               <button key={q} type="button" onClick={() => setMyQ(q)}
-                className={["flex-1 py-2 text-[13px] font-medium", myQ === q ? "bg-[#F8F7F4]" : "bg-white text-[#8A857D]"].join(" ")}
-              >{q}</button>
+                className={["flex-1 py-2.5 text-[14px] font-medium md:py-2 md:text-[13px]", myQ === q ? "bg-[#F8F7F4]" : "bg-white text-[#8A857D]"].join(" ")}
+              >{translateLabel(t, myQuestsKeyMap, q)}</button>
             ))}
           </div>
         </div>
 
-        <div className="flex gap-3 border-t border-[#EDECE6] px-5 py-4 shrink-0">
+        <div className="flex gap-3 border-t border-[#EDECE6] px-5.5 py-4 shrink-0 md:px-5">
           <button
             type="button"
             onClick={clearAll}
-            className="flex h-13.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[15px] font-semibold text-[#2F2F2F]"
+            className="flex h-14.5 flex-1 items-center justify-center rounded-full border border-[#E5E3DC] text-[16px] font-semibold text-[#2F2F2F] md:h-13.5 md:text-[15px]"
           >
-            Clear all
+            {t("explore.clearAll", "Clear all")}
           </button>
-          <button type="button" onClick={onClose} className="flex h-13.5 flex-2 items-center justify-center rounded-full bg-[#15A963] text-[15px] font-semibold text-white">
-            See {filteredCount} quest{filteredCount !== 1 ? "s" : ""}
+          <button type="button" onClick={onClose} className="flex h-14.5 flex-2 items-center justify-center rounded-full bg-[#15A963] text-[16px] font-semibold text-white md:h-13.5 md:text-[15px]">
+            {t("explore.seeResults", "See")} {filteredCount} {filteredCount !== 1 ? t("explore.questPlural", "quests") : t("explore.questSingular", "quest")}
           </button>
         </div>
       </div>
@@ -418,39 +433,40 @@ function FiltersSheet({
 
 // ── Search expanded ───────────────────────────────────────────────────────────
 function SearchExpanded({ query, setQuery, results, onNearby, onClose }) {
+  const { t } = useContext(LanguageContext);
   const hasQuery = query.trim() !== "";
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-[#F8F7F4] px-4 pt-4">
-      <div className="flex h-13.5 shrink-0 items-center gap-3 rounded-full bg-white px-4 shadow-[0_4px_16px_rgba(47,47,47,0.07)]">
+    <div className="absolute inset-0 z-30 flex flex-col bg-[#F8F7F4] px-4.5 pt-4 md:px-4">
+      <div className="flex h-14.5 shrink-0 items-center gap-3 rounded-full bg-white px-4.5 shadow-[0_4px_16px_rgba(47,47,47,0.07)] md:h-13.5 md:px-4">
         <button type="button" onClick={onClose}><BackIcon /></button>
         <input
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Where will you explore next?"
-          className="flex-1 bg-transparent text-[16px] font-medium text-[#2F2F2F] outline-none placeholder:text-[#A7A39D]"
+          placeholder={t("explore.searchPlaceholder", "Where will you explore next?")}
+          className="flex-1 bg-transparent text-[17px] font-medium text-[#2F2F2F] outline-none placeholder:text-[#A7A39D] md:text-[16px]"
         />
       </div>
 
       <button
         type="button"
         onClick={onNearby}
-        className="mt-3 flex shrink-0 items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-[0_4px_14px_rgba(47,47,47,0.06)]"
+        className="mt-3 flex shrink-0 items-center gap-4 rounded-2xl bg-white p-4.5 text-left shadow-[0_4px_14px_rgba(47,47,47,0.06)] md:p-4"
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0FBF5]">
+        <div className="flex h-11.75 w-11.75 shrink-0 items-center justify-center rounded-xl bg-[#F0FBF5] md:h-11 md:w-11">
           <LocationArrow />
         </div>
         <div>
-          <p className="text-[15px] font-semibold text-[#2F2F2F]">Nearby quest</p>
-          <p className="text-[13px] text-[#8A857D]">Use my current location</p>
+          <p className="text-[16px] font-semibold text-[#2F2F2F] md:text-[15px]">{t("explore.nearbyQuest", "Nearby quest")}</p>
+          <p className="text-[14px] text-[#8A857D] md:text-[13px]">{t("explore.useMyLocation", "Use my current location")}</p>
         </div>
       </button>
 
       {hasQuery && (
         <div className="mt-4 flex-1 overflow-y-auto pb-6 [&::-webkit-scrollbar]:hidden">
-          <p className="mb-3 text-[13px] font-medium text-[#8A857D]">
-            {results.length} quest{results.length !== 1 ? "s" : ""} found
+          <p className="mb-3 text-[14px] font-medium text-[#8A857D] md:text-[13px]">
+            {results.length} {t("explore.questsFound", "quests found")}
           </p>
           {results.length > 0 ? (
             <div className="space-y-4">
@@ -459,7 +475,7 @@ function SearchExpanded({ query, setQuery, results, onNearby, onClose }) {
               ))}
             </div>
           ) : (
-            <p className="mt-8 text-center text-[14px] text-[#8A857D]">No quests match "{query}".</p>
+            <p className="mt-8 text-center text-[15px] text-[#8A857D] md:text-[14px]">{t("explore.noQuestsMatch", "No quests match")} "{query}".</p>
           )}
         </div>
       )}
@@ -475,6 +491,7 @@ const DRAG_TAP_THRESHOLD_PX = 4;
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Explore() {
+  const { t, currentLanguage } = useContext(LanguageContext);
   const [query, setQuery]           = useState("");
   const [difficulty, setDifficulty] = useState("All");
   const [sort, setSort]             = useState("Most relevant");
@@ -493,7 +510,7 @@ export default function Explore() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/quests`)
+    fetch(`${API_URL}/api/quests?lang=${currentLanguage}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
@@ -513,7 +530,7 @@ export default function Explore() {
     return () => {
       cancelled = true;
     };
-  }, [retryCount]);
+  }, [retryCount, currentLanguage]);
 
   // Only requested once the user actually picks "Closest", so we don't
   // prompt for location permission before it's needed.
@@ -616,10 +633,12 @@ export default function Explore() {
       const matchAccessibility =
         accessibility.length === 0 || accessibility.includes(q.accessibility);
 
-      // Activity/Features match against the same frontend-only tag list —
+      // Activity/Features match against the quest's real backend tags where
+      // available, falling back to the frontend-only map otherwise —
       // case-insensitive since the tag data and the sheet's option labels
       // don't always agree on capitalization (e.g. "Hidden history").
-      const tags = (tagsByQuestId[q.id] ?? []).map((t) => t.toLowerCase());
+      const questTags = q.tags?.length > 0 ? q.tags : tagsByQuestId[q.id] ?? [];
+      const tags = questTags.map((tag) => tag.toLowerCase());
       const matchActivity =
         activity.length === 0 || activity.some((a) => tags.includes(a.toLowerCase()));
       const matchFeatures =
@@ -682,6 +701,7 @@ export default function Explore() {
   ]);
 
   const anySheetOpen = isFiltersOpen || isDiffOpen || isDurationOpen || isDistanceOpen || isSortOpen;
+  const mapButtonVisible = !anySheetOpen && !isSearchOpen && !dragging && sheetTop < 1;
 
   const { ref: chipRef, onMouseDown: onChipMouseDown, onMouseMove: onChipMouseMove, onMouseUp: onChipMouseUp, onMouseLeave: onChipMouseLeave, onClickCapture: onChipClickCapture } = useDragScroll();
 
@@ -707,7 +727,7 @@ export default function Explore() {
         {/* Drag handle — swipe or tap to reveal/hide the map behind */}
         <div
           role="button"
-          aria-label="Toggle map"
+          aria-label={t("explore.toggleMap", "Toggle map")}
           onPointerDown={handleHandlePointerDown}
           onPointerMove={handleHandlePointerMove}
           onPointerUp={handleHandlePointerUp}
@@ -717,20 +737,30 @@ export default function Explore() {
           <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
         </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 [&::-webkit-scrollbar]:hidden">
+      <div
+        className={[
+          "flex-1 overflow-y-auto px-4.5 [&::-webkit-scrollbar]:hidden md:px-4",
+          // Extra bottom room while the floating Map button is showing, so the
+          // last card can scroll clear of it instead of staying hidden behind
+          // it — plain padding, not a visible section (no background here).
+          mapButtonVisible ? "pb-40" : "pb-6",
+        ].join(" ")}
+      >
 
         {/* Search bar */}
         <button
           type="button"
           onClick={() => setIsSearchOpen(true)}
-          className="flex h-13 w-full items-center gap-3 rounded-full bg-white px-5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] text-left"
+          className="flex h-14 w-full items-center gap-3 rounded-full bg-white px-5.5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] text-left md:h-13 md:px-5"
         >
           <SearchIcon />
-          <span className="text-[15px] font-medium text-[#A7A39D]">Where will you explore next?</span>
+          <span className="text-[16px] font-medium text-[#A7A39D] md:text-[15px]">
+            {t("explore.searchPlaceholder", "Where will you explore next?")}
+          </span>
         </button>
 
         {/* Chips — extend edge to edge so scroll works */}
-        <div className="-mx-4 mt-4">
+        <div className="-mx-4.5 mt-4 md:-mx-4">
         <div
           ref={chipRef}
           onMouseDown={onChipMouseDown}
@@ -738,26 +768,26 @@ export default function Explore() {
           onMouseUp={onChipMouseUp}
           onMouseLeave={onChipMouseLeave}
           onClickCapture={onChipClickCapture}
-          className="flex cursor-grab gap-2 overflow-x-auto px-4 pb-1 scrollbar-none active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+          className="flex cursor-grab gap-2 overflow-x-auto px-4.5 pb-1 scrollbar-none active:cursor-grabbing [&::-webkit-scrollbar]:hidden md:px-4"
         >
           {/* All */}
           <button
             type="button"
             onClick={() => setIsFiltersOpen(true)}
-            className="flex h-10.5 shrink-0 items-center gap-2 rounded-full bg-[#15A963] px-4 text-[14px] font-semibold text-white"
+            className="flex h-11.25 shrink-0 items-center gap-2 rounded-full bg-[#15A963] px-4.5 text-[15px] font-semibold text-white md:h-10.5 md:px-4 md:text-[14px]"
           >
-            <FilterIcon />All
+            <FilterIcon />{t("explore.allQuests", "All")}
           </button>
 
           {/* Difficulty */}
           <button
             type="button"
             onClick={() => setIsDiffOpen(true)}
-            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-11.25 shrink-0 items-center gap-2 rounded-full px-4.5 text-[15px] font-medium md:h-10.5 md:px-4 md:text-[14px]",
               difficulty !== "All" ? "bg-[#E7F5EF] text-[#2F2F2F]" : "bg-[#F4F2EE] text-[#2F2F2F]"].join(" ")}
           >
             {difficulty !== "All" && <DifficultyIcon label={difficulty} />}
-            {difficulty !== "All" ? difficulty : "Difficulty"}
+            {difficulty !== "All" ? translateLabel(t, difficultyKeyMap, difficulty) : t("explore.difficulty", "Difficulty")}
             <ChevronDown />
           </button>
 
@@ -765,10 +795,10 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsDurationOpen(true)}
-            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-11.25 shrink-0 items-center gap-2 rounded-full px-4.5 text-[15px] font-medium md:h-10.5 md:px-4 md:text-[14px]",
               duration < 120 ? "bg-[#E7F5EF]" : "bg-[#F4F2EE]"].join(" ")}
           >
-            {duration < 120 ? `0-${duration} min` : "Duration"}
+            {duration < 120 ? `0-${duration} ${t("common.min", "min")}` : t("explore.duration", "Duration")}
             <ChevronDown />
           </button>
 
@@ -776,10 +806,10 @@ export default function Explore() {
           <button
             type="button"
             onClick={() => setIsDistanceOpen(true)}
-            className={["flex h-10.5 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-medium",
+            className={["flex h-11.25 shrink-0 items-center gap-2 rounded-full px-4.5 text-[15px] font-medium md:h-10.5 md:px-4 md:text-[14px]",
               distance < 15 ? "bg-[#E7F5EF]" : "bg-[#F4F2EE]"].join(" ")}
           >
-            {distance < 15 ? `0-${distance} km` : "Distance"}
+            {distance < 15 ? `0-${distance} ${t("common.km", "km")}` : t("explore.distance", "Distance")}
             <ChevronDown />
           </button>
         </div>
@@ -787,22 +817,22 @@ export default function Explore() {
 
         {/* Count + sort */}
         <div className="mt-5 flex items-center justify-between">
-          <h1 className="text-[17px] font-bold">
-            {isLoading ? "Loading quests…" : `${filtered.length} quests found`}
+          <h1 className="text-[18px] font-bold md:text-[17px]">
+            {isLoading ? t("explore.loading", "Loading quests…") : `${filtered.length} ${t("explore.questsFound", "quests found")}`}
           </h1>
-          <button type="button" onClick={() => setIsSortOpen(true)} className="flex items-center gap-1 text-[14px] font-medium text-[#8A857D]">
-            {sort} <ChevronDown />
+          <button type="button" onClick={() => setIsSortOpen(true)} className="flex items-center gap-1 text-[15px] font-medium text-[#8A857D] md:text-[14px]">
+            {translateLabel(t, sortKeyMap, sort)} <ChevronDown />
           </button>
         </div>
 
         {/* Cards */}
         {isLoading && (
-          <p className="mt-8 text-center text-[14px] text-[#8A857D]">Loading quests…</p>
+          <p className="mt-8 text-center text-[15px] md:text-[14px] text-[#8A857D]">{t("explore.loading", "Loading quests…")}</p>
         )}
 
         {!isLoading && error && (
           <div className="mt-8 flex flex-col items-center gap-3 text-center">
-            <p className="text-[14px] text-[#8A857D]">Couldn't load quests. {error}</p>
+            <p className="text-[15px] md:text-[14px] text-[#8A857D]">{t("explore.loadError", "Couldn't load quests.")} {error}</p>
             <button
               type="button"
               onClick={() => {
@@ -810,15 +840,15 @@ export default function Explore() {
                 setError(null);
                 setRetryCount((c) => c + 1);
               }}
-              className="rounded-full bg-[#15A963] px-5 py-2.5 text-[14px] font-semibold text-white"
+              className="rounded-full bg-[#15A963] px-5.5 py-3 text-[15px] font-semibold text-white md:px-5 md:py-2.5 md:text-[14px]"
             >
-              Try again
+              {t("common.retry", "Try again")}
             </button>
           </div>
         )}
 
         {!isLoading && !error && filtered.length === 0 && (
-          <p className="mt-8 text-center text-[14px] text-[#8A857D]">No quests found.</p>
+          <p className="mt-8 text-center text-[15px] md:text-[14px] text-[#8A857D]">{t("explore.noResults", "No quests found.")}</p>
         )}
 
         {!isLoading && !error && filtered.length > 0 && (
@@ -833,19 +863,29 @@ export default function Explore() {
           </section>
         )}
       </div>
-      </div>
 
-      {/* Map FAB — only shown while the sheet is fully covering the map; tap to peek */}
-      {!anySheetOpen && !isSearchOpen && !dragging && sheetTop < 1 && (
-        <button
-          type="button"
-          onClick={openMap}
-          className="absolute bottom-4 right-4 z-30 flex h-16.5 w-16.5 flex-col items-center justify-center gap-0.5 rounded-full bg-[#252525] text-[12px] font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)]"
-        >
-          <MapFabIcon />
-          <span>Map</span>
-        </button>
+      {/* Map button — a floating overlay above the bottom nav, not part of
+          normal document flow (no wrapper background/height/padding), so
+          quest cards keep scrolling visibly underneath it. Fixed positioning
+          matches the real device viewport on mobile; on the md: desktop
+          mockup (a bounded, non-fullscreen box) fixed would escape the
+          phone frame entirely, so it switches to absolute there instead —
+          same visual position, just contained to the mockup like everything
+          else on this page. Only shown while the sheet fully covers the map. */}
+      {mapButtonVisible && (
+        <div className="fixed md:absolute left-1/2 z-40 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom)+16px)] md:bottom-[12px]">
+          <button
+            type="button"
+            onClick={openMap}
+            aria-label={t("explore.showMapView", "Show map view")}
+            className="flex h-13.5 w-35 items-center justify-center gap-2 rounded-full bg-[#15A963] text-[16px] font-semibold text-white shadow-[0_8px_20px_rgba(21,169,99,0.35)] md:text-[15px]"
+          >
+            <MapFabIcon />
+            {t("explore.map", "Map")}
+          </button>
+        </div>
       )}
+      </div>
 
       {/* Search */}
       {isSearchOpen && (

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import BackButton from "../components/BackButton";
+import { LanguageContext } from "../context/LanguageContext";
 
 const STORAGE_KEY = "wayo-location-permission";
 const geoSupported = typeof navigator !== "undefined" && "geolocation" in navigator;
@@ -31,6 +32,7 @@ function getStoredStatus() {
 
 export default function LocationPermissions() {
   const navigate = useNavigate();
+  const { t } = useContext(LanguageContext);
   const [status, setStatus] = useState(getStoredStatus); // "prompt" | "granted" | "denied"
 
   function saveStatus(next) {
@@ -68,7 +70,7 @@ export default function LocationPermissions() {
   return (
     <main className="h-full overflow-y-auto bg-[#F8F7F4] px-5 pb-6 text-[#2F2F2F] [&::-webkit-scrollbar]:hidden">
       <BackButton className="mt-2" />
-      <h1 className="mt-6 text-[24px] font-bold">Location permissions</h1>
+      <h1 className="mt-6 text-[24px] font-bold">{t("location.title", "Location permissions")}</h1>
 
       {status === "granted" && (
         <>
@@ -77,18 +79,20 @@ export default function LocationPermissions() {
               <LocationIcon />
             </div>
             <div>
-              <p className="text-[15px] font-semibold text-[#2F2F2F]">While using the app</p>
-              <p className="text-[13px] font-medium text-[#15A963]">Allowed</p>
+              <p className="text-[15px] font-semibold text-[#2F2F2F]">{t("location.whileUsingApp", "While using the app")}</p>
+              <p className="text-[13px] font-medium text-[#15A963]">{t("location.allowed", "Allowed")}</p>
             </div>
           </div>
 
           <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
-            WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are.
-            We never share your location with third parties, and it's only accessed while the app is open.
+            {t(
+              "location.grantedBody1",
+              "WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are. We never share your location with third parties, and it's only accessed while the app is open."
+            )}
           </p>
 
           <p className="mt-4 text-[15px] leading-[1.5] text-[#2F2F2F]">
-            You can change this at any time from your device's system settings.
+            {t("location.grantedBody2", "You can change this at any time from your device's system settings.")}
           </p>
         </>
       )}
@@ -100,17 +104,20 @@ export default function LocationPermissions() {
               <LocationOffIcon />
             </div>
             <div>
-              <p className="text-[15px] font-semibold text-[#2F2F2F]">Location access is off</p>
-              <p className="text-[13px] font-medium text-[#D44A08]">Not allowed</p>
+              <p className="text-[15px] font-semibold text-[#2F2F2F]">{t("location.off", "Location access is off")}</p>
+              <p className="text-[13px] font-medium text-[#D44A08]">{t("location.notAllowed", "Not allowed")}</p>
             </div>
           </div>
 
           <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
-            You can still use WAYO without location — just search for a place or pick a quest manually from Explore.
+            {t(
+              "location.deniedBody1",
+              "You can still use WAYO without location — just search for a place or pick a quest manually from Explore."
+            )}
           </p>
 
           <p className="mt-4 text-[15px] leading-[1.5] text-[#2F2F2F]">
-            You can turn location back on at any time from your browser or device settings.
+            {t("location.deniedBody2", "You can turn location back on at any time from your browser or device settings.")}
           </p>
 
           <button
@@ -118,7 +125,7 @@ export default function LocationPermissions() {
             onClick={requestLocation}
             className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white"
           >
-            Try again
+            {t("common.retry", "Try again")}
           </button>
 
           <button
@@ -126,7 +133,7 @@ export default function LocationPermissions() {
             onClick={() => navigate("/explore")}
             className="mt-3 flex h-13.5 w-full items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F]"
           >
-            Explore manually
+            {t("location.exploreManually", "Explore manually")}
           </button>
         </>
       )}
@@ -134,8 +141,10 @@ export default function LocationPermissions() {
       {status === "prompt" && (
         <>
           <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
-            WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are.
-            We never share your location with third parties.
+            {t(
+              "location.promptBody",
+              "WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are. We never share your location with third parties."
+            )}
           </p>
 
           <button
@@ -143,7 +152,7 @@ export default function LocationPermissions() {
             onClick={requestLocation}
             className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white"
           >
-            Allow location
+            {t("location.allowLocation", "Allow location")}
           </button>
 
           <button
@@ -151,12 +160,12 @@ export default function LocationPermissions() {
             onClick={() => navigate(-1)}
             className="mt-3 flex h-13.5 w-full items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F]"
           >
-            Not now
+            {t("location.notNow", "Not now")}
           </button>
 
           {!geoSupported && (
             <p className="mt-4 text-[13px] text-[#8A857D]">
-              Location isn't supported in this browser, but you can still explore manually.
+              {t("location.notSupported", "Location isn't supported in this browser, but you can still explore manually.")}
             </p>
           )}
         </>

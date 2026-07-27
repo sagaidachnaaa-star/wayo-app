@@ -1,8 +1,11 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Routes, Route, useLocation } from "react-router";
 import BottomNav from "./components/BottomNav";
+import Toast from "./components/Toast";
 import { SplashOverlayContext } from "./context/SplashContext";
 import { SavedContext } from "./context/SavedContext";
+import { LanguageContext } from "./context/LanguageContext";
+import { API_URL } from "./config/api";
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Explore from "./pages/Explore";
@@ -25,8 +28,11 @@ function StatusBar({ overlay = false }) {
   return (
     <div
       className={[
-        "flex items-center justify-between px-6 pt-3 pb-1 text-[15px] font-semibold",
-        overlay ? "absolute inset-x-0 top-0 z-50" : "relative shrink-0",
+        // Fake iPhone status bar — only meaningful for the desktop mockup
+        // preview. A real phone already shows its own real status bar, so
+        // this must never render below the md breakpoint.
+        "hidden items-center justify-between px-6 pt-3 pb-1 text-[15px] font-semibold md:flex",
+        overlay ? "md:absolute md:inset-x-0 md:top-0 md:z-50" : "md:relative md:shrink-0",
       ].join(" ")}
       style={{ color: "#1a1a1a", height: 52 }}
     >
@@ -55,7 +61,6 @@ function StatusBar({ overlay = false }) {
   );
 }
 
-const API_URL = "http://localhost:5050";
 const NO_NAV = ["/", "/onboarding"];
 
 function Shell() {
@@ -67,8 +72,14 @@ function Shell() {
 
   return (
     <div
-      className="relative flex w-93.75 flex-col overflow-hidden rounded-[48px] shadow-2xl ring-[6px] ring-gray-800"
-      style={{ height: "min(812px, calc(100vh - 32px))", background: "#F8F7F4" }}
+      className="relative flex h-dvh w-full flex-col overflow-hidden md:h-[min(812px,calc(100vh-32px))] md:w-93.75 md:rounded-[48px] md:shadow-2xl md:ring-[6px] md:ring-gray-800"
+      style={{
+        background: "#F8F7F4",
+        // Real safe-area insets — only matter when there's no browser chrome
+        // (e.g. installed as a home-screen app), harmless (0px) elsewhere.
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       <div
         className="pointer-events-none absolute inset-0 z-50 rounded-[42px]"
@@ -81,7 +92,7 @@ function Shell() {
 
       {!isImmersive && <StatusBar />}
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {isImmersive && <StatusBar overlay />}
         <Routes>
           <Route path="/" element={<Splash />} />
@@ -105,14 +116,28 @@ function Shell() {
       </div>
 
       {!hideNav && <BottomNav />}
+
+      <ShellToast />
     </div>
   );
 }
 
+// Reads toast state from SavedContext (set by toggleSaved below) and renders
+// it at the Shell level — one place, so it appears above the bottom nav on
+// every page, and above the sticky Start/Repeat button on Quest Detail
+// (which hides the nav), without any page needing its own copy.
+function ShellToast() {
+  const { toast, dismissToast } = useContext(SavedContext);
+  return <Toast toast={toast} onDismiss={dismissToast} />;
+}
+
 function App() {
+  const { t } = useContext(LanguageContext);
   const [greenPhase, setGreenPhase] = useState(false);
   const [savedMap, setSavedMap] = useState({});
   const savedMapRef = useRef(savedMap);
+  const [toast, setToast] = useState(null);
+  const dismissToast = useCallback(() => setToast(null), []);
 
   // Load which quests are already saved (backend is the source of truth —
   // no login yet, so this is always the one demo user's saved list).
@@ -153,16 +178,33 @@ function App() {
     });
 
     // Optimistic UI update above already happened — persist to the backend
-    // in the background. MVP: no rollback if this fails, just log it.
-    fetch(`${API_URL}/api/saved/${id}`, { method: wasSaved ? "DELETE" : "POST" }).catch(() => {
-      console.error("Failed to sync saved quest with the backend");
-    });
-  }, []);
+    // in the background. On success, confirm with a toast; on failure, roll
+    // the optimistic update back and tell the user instead of failing silently.
+    fetch(`${API_URL}/api/saved/${id}`, { method: wasSaved ? "DELETE" : "POST" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        setToast({
+          message: wasSaved
+            ? t("notification.removed", "Removed from saved")
+            : t("notification.saved", "Added to saved"),
+        });
+      })
+      .catch(() => {
+        console.error("Failed to sync saved quest with the backend");
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          if (wasSaved) next[id] = Date.now();
+          else delete next[id];
+          return next;
+        });
+        setToast({ message: t("notification.saveError", "Couldn't save — please try again") });
+      });
+  }, [t]);
 
   return (
     <SplashOverlayContext.Provider value={{ greenPhase, setGreenPhase }}>
-      <SavedContext.Provider value={{ savedMap, toggleSaved }}>
-        <div className="flex h-screen items-center justify-center" style={{ background: "#F7F6F3" }}>
+      <SavedContext.Provider value={{ savedMap, toggleSaved, toast, dismissToast }}>
+        <div className="flex min-h-dvh w-full items-center justify-center overflow-x-hidden" style={{ background: "#F7F6F3" }}>
           <Shell />
         </div>
       </SavedContext.Provider>

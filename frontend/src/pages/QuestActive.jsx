@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -6,18 +6,19 @@ import "leaflet/dist/leaflet.css";
 import { quests } from "../data/quests";
 import { questDetails } from "../data/questDetails";
 import { getActiveQuestProgress, saveActiveQuestProgress, clearActiveQuestProgress, saveCompletedQuest } from "../utils/questProgress";
+import { LanguageContext } from "../context/LanguageContext";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BackArrowIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="#2F2F2F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function PauseIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2F2F2F">
+    <svg className="h-4.25 w-4.25 md:h-4 md:w-4" viewBox="0 0 24 24" fill="#2F2F2F">
       <rect x="6" y="5" width="4" height="14" rx="1" />
       <rect x="14" y="5" width="4" height="14" rx="1" />
     </svg>
@@ -25,28 +26,28 @@ function PauseIcon() {
 }
 function PlayIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="#2F2F2F">
+    <svg className="h-4.25 w-4.25 md:h-4 md:w-4" viewBox="0 0 24 24" fill="#2F2F2F">
       <path d="M7 5v14l12-7Z" />
     </svg>
   );
 }
 function BookmarkIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4.25 w-4.25 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none">
       <path d="M6 4h12v16l-6-4-6 4Z" stroke="#2F2F2F" strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
 }
 function ArrowRightIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4.25 w-4.25 md:h-4 md:w-4" viewBox="0 0 24 24" fill="none">
       <path d="M5 12h14M13 6l6 6-6 6" stroke="#15A963" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function QrIcon() {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+    <svg className="h-10.5 w-10.5 md:h-10 md:w-10" viewBox="0 0 24 24" fill="none">
       <rect x="3" y="3" width="7" height="7" rx="1" stroke="#8A857D" strokeWidth="1.6" />
       <rect x="14" y="3" width="7" height="7" rx="1" stroke="#8A857D" strokeWidth="1.6" />
       <rect x="3" y="14" width="7" height="7" rx="1" stroke="#8A857D" strokeWidth="1.6" />
@@ -136,6 +137,7 @@ const COLLAPSED_VISIBLE_HEIGHT = 230;
 export default function QuestActive() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useContext(LanguageContext);
   const quest = quests.find((q) => q.id === id);
   const detail = questDetails[quest?.id];
 
@@ -221,7 +223,7 @@ export default function QuestActive() {
   if (!quest) {
     return (
       <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
-        <p>Quest not found.</p>
+        <p>{t("quest.notFound", "Quest not found.")}</p>
       </main>
     );
   }
@@ -309,8 +311,8 @@ export default function QuestActive() {
       <button
         type="button"
         onClick={() => navigate(-1)}
-        aria-label="Back"
-        className="absolute left-6 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-[0_4px_14px_rgba(47,47,47,0.15)]"
+        aria-label={t("common.back", "Back")}
+        className="absolute left-6 z-40 flex h-11.75 w-11.75 items-center justify-center rounded-full bg-white shadow-[0_4px_14px_rgba(47,47,47,0.15)] md:h-11 md:w-11"
         style={{ top: HEADER_TOP_OFFSET }}
       >
         <BackArrowIcon />
@@ -323,7 +325,7 @@ export default function QuestActive() {
       >
         <div
           role="button"
-          aria-label="Drag to resize"
+          aria-label={t("questActive.dragToResize", "Drag to resize")}
           onPointerDown={handleHandlePointerDown}
           onPointerMove={handleHandlePointerMove}
           onPointerUp={handleHandlePointerUp}
@@ -333,51 +335,51 @@ export default function QuestActive() {
           <div className="h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-6 [&::-webkit-scrollbar]:hidden">
-          <h1 className="text-[22px] font-bold text-[#2F2F2F]">{quest.title}</h1>
-          <p className="mt-1 text-[14px] text-[#2F2F2F]">
-            {currentStop} of {totalStops} stops completed
+        <div className="flex-1 overflow-y-auto px-5.5 pb-6 [&::-webkit-scrollbar]:hidden md:px-5">
+          <h1 className="text-[24px] font-bold text-[#2F2F2F] md:text-[22px]">{quest.title}</h1>
+          <p className="mt-1 text-[15px] text-[#2F2F2F] md:text-[14px]">
+            {currentStop} {t("common.of", "of")} {totalStops} {t("questActive.stopsCompleted", "stops completed")}
           </p>
           <div className="mt-2 flex items-center gap-3">
             <div className="h-2 flex-1 rounded-full bg-[#E5E3DC]">
               <div className="h-full rounded-full bg-[#15A963]" style={{ width: `${percent}%` }} />
             </div>
-            <span className="text-[14px] font-semibold text-[#2F2F2F]">{percent}%</span>
+            <span className="text-[15px] font-semibold text-[#2F2F2F] md:text-[14px]">{percent}%</span>
           </div>
 
           <button
             type="button"
             onClick={handleContinue}
-            className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#15A963] text-[16px] font-bold text-white"
+            className="mt-4 flex h-15 w-full items-center justify-center gap-2 rounded-full bg-[#15A963] text-[17px] font-bold text-white md:h-14 md:text-[16px]"
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white">
+            <span className="flex h-6.5 w-6.5 items-center justify-center rounded-full bg-white md:h-6 md:w-6">
               <ArrowRightIcon />
             </span>
-            {isLastStop ? "Scan QR code to complete" : "Continue to next stop"}
+            {isLastStop ? t("questActive.scanQrToComplete", "Scan QR code to complete") : t("questActive.continueToNextStop", "Continue to next stop")}
           </button>
 
-          <p className="mt-3 text-center text-[12px] text-[#8A857D]">No time limit - complete at your own pace.</p>
+          <p className="mt-3 text-center text-[13px] text-[#8A857D] md:text-[12px]">{t("questActive.noTimeLimit", "No time limit - complete at your own pace.")}</p>
 
-          <p className="mt-6 text-[13px] font-semibold text-[#15A963]">Current stop</p>
-          <h2 className="text-[19px] font-bold text-[#2F2F2F]">{currentStopName}</h2>
-          <p className="mt-1 text-[13px] leading-[1.4] text-[#8A857D]">
-            Follow the route and scan the QR code at the final stop to complete the quest.
+          <p className="mt-6 text-[14px] font-semibold text-[#15A963] md:text-[13px]">{t("questActive.currentStop", "Current stop")}</p>
+          <h2 className="text-[20px] font-bold text-[#2F2F2F] md:text-[19px]">{currentStopName}</h2>
+          <p className="mt-1 text-[14px] leading-[1.4] text-[#8A857D] md:text-[13px]">
+            {t("questActive.followRoute", "Follow the route and scan the QR code at the final stop to complete the quest.")}
           </p>
 
           <div className="mt-5 grid grid-cols-3 gap-3">
             <div>
-              <p className="text-[20px] font-bold text-[#2F2F2F]">{formatTime(secondsElapsed)}</p>
-              <p className="text-[12px] text-[#8A857D]">elapsed</p>
+              <p className="text-[21px] font-bold text-[#2F2F2F] md:text-[20px]">{formatTime(secondsElapsed)}</p>
+              <p className="text-[13px] text-[#8A857D] md:text-[12px]">{t("questActive.elapsed", "elapsed")}</p>
             </div>
             <div>
-              <p className="text-[20px] font-bold text-[#2F2F2F]">
-                {remainingKm} <span className="text-[13px] font-medium text-[#8A857D]">km</span>
+              <p className="text-[21px] font-bold text-[#2F2F2F] md:text-[20px]">
+                {remainingKm} <span className="text-[14px] font-medium text-[#8A857D] md:text-[13px]">{t("common.km", "km")}</span>
               </p>
-              <p className="text-[12px] text-[#8A857D]">remaining</p>
+              <p className="text-[13px] text-[#8A857D] md:text-[12px]">{t("questActive.remaining", "remaining")}</p>
             </div>
             <div>
-              <p className="text-[20px] font-bold text-[#2F2F2F]">{stopsLeft}</p>
-              <p className="text-[12px] text-[#8A857D]">stops left</p>
+              <p className="text-[21px] font-bold text-[#2F2F2F] md:text-[20px]">{stopsLeft}</p>
+              <p className="text-[13px] text-[#8A857D] md:text-[12px]">{t("questActive.stopsLeft", "stops left")}</p>
             </div>
           </div>
 
@@ -385,31 +387,31 @@ export default function QuestActive() {
             <button
               type="button"
               onClick={() => setIsPaused((p) => !p)}
-              className="flex h-13 flex-1 items-center justify-center gap-2 rounded-full border border-[#E5E3DC] bg-white text-[15px] font-semibold text-[#2F2F2F]"
+              className="flex h-13.5 flex-1 items-center justify-center gap-2 rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F] md:h-13 md:text-[15px]"
             >
               {isPaused ? <PlayIcon /> : <PauseIcon />}
-              {isPaused ? "Resume" : "Pause"}
+              {isPaused ? t("questActive.resume", "Resume") : t("questActive.pause", "Pause")}
             </button>
             <button
               type="button"
               onClick={handleSaveExit}
-              className="flex h-13 flex-1 items-center justify-center gap-2 rounded-full border border-[#E5E3DC] bg-white text-[15px] font-semibold text-[#2F2F2F]"
+              className="flex h-13.5 flex-1 items-center justify-center gap-2 rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F] md:h-13 md:text-[15px]"
             >
               <BookmarkIcon />
-              Save &amp; exit
+              {t("questActive.saveExit", "Save & exit")}
             </button>
           </div>
 
           <div className="mt-6">
-            <p className="text-[13px] font-semibold text-[#2F2F2F]">All stops</p>
+            <p className="text-[14px] font-semibold text-[#2F2F2F] md:text-[13px]">{t("questActive.allStops", "All stops")}</p>
             <div className="mt-2 space-y-2">
               {routeStops.map((stop, i) => {
                 const state = getStopState(i);
                 return (
-                  <div key={stop.title} className="flex items-center gap-2.5 text-[14px]">
+                  <div key={stop.title} className="flex items-center gap-2.5 text-[15px] md:text-[14px]">
                     <span
                       className={[
-                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                        "flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full text-[12px] font-bold md:h-6 md:w-6 md:text-[11px]",
                         state === "completed"
                           ? "bg-[#15A963] text-white"
                           : state === "current"
@@ -431,29 +433,29 @@ export default function QuestActive() {
       {/* Simulated QR scan modal — shown once the user reaches the final stop */}
       {isQrOpen && (
         <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/40" onClick={() => setIsQrOpen(false)}>
-          <div className="w-full rounded-t-[28px] bg-white px-5 pb-6 pt-3 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full rounded-t-[28px] bg-white px-5.5 pb-6 pt-3 text-center md:px-5" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto h-1.25 w-11 rounded-full bg-[#D5D2CC]" />
-            <h2 className="mt-4 text-[19px] font-bold text-[#2F2F2F]">Scan final QR code</h2>
-            <p className="mt-1 text-[13px] text-[#8A857D]">Scan the QR code at the final stop to unlock your badge.</p>
+            <h2 className="mt-4 text-[20px] font-bold text-[#2F2F2F] md:text-[19px]">{t("questActive.scanFinalQr", "Scan final QR code")}</h2>
+            <p className="mt-1 text-[14px] text-[#8A857D] md:text-[13px]">{t("questActive.scanFinalQrDesc", "Scan the QR code at the final stop to unlock your badge.")}</p>
 
             {/* QR scanning is simulated for the MVP and can be replaced with a real QR scanner later. */}
-            <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-dashed border-[#D5D2CC] bg-[#F8F7F4]">
+            <div className="mx-auto mt-5 flex h-47 w-47 items-center justify-center rounded-2xl border-2 border-dashed border-[#D5D2CC] bg-[#F8F7F4] md:h-44 md:w-44">
               <QrIcon />
             </div>
 
             <button
               type="button"
               onClick={handleSimulateScan}
-              className="mt-6 flex h-13.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white"
+              className="mt-6 flex h-14.5 w-full items-center justify-center rounded-full bg-[#15A963] text-[17px] font-bold text-white md:h-13.5 md:text-[16px]"
             >
-              Simulate QR scan
+              {t("questActive.simulateQrScan", "Simulate QR scan")}
             </button>
             <button
               type="button"
               onClick={() => setIsQrOpen(false)}
-              className="mt-3 flex h-13.5 w-full items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[15px] font-semibold text-[#2F2F2F]"
+              className="mt-3 flex h-14.5 w-full items-center justify-center rounded-full border border-[#E5E3DC] bg-white text-[16px] font-semibold text-[#2F2F2F] md:h-13.5 md:text-[15px]"
             >
-              Cancel
+              {t("common.cancel", "Cancel")}
             </button>
           </div>
         </div>

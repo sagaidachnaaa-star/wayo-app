@@ -1,14 +1,18 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { SavedContext } from "../context/SavedContext";
+import { LanguageContext } from "../context/LanguageContext";
+import { difficultyKeyMap, discoverKeyMap, questAccessibilityKeyMap, tagKeyMap, translateLabel } from "../i18n/labelKeys";
 import { getCompletedQuests } from "../utils/questProgress";
+import { API_URL } from "../config/api";
+import { trackEvent } from "../analytics/amplitude";
+
 
 import distanceIcon from "../assets/DistanceIcon.png";
 import timeIcon from "../assets/TimeIcon.png";
 import difficultyIcon from "../assets/DifficultyIcon.png";
 import accessibilityIcon from "../assets/AccessibilityIcon.png";
 
-const API_URL = "http://localhost:5050";
 const WEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
 const LOCKED_BADGE_IMAGE = "/assets/Lockedbadge.png";
 
@@ -23,6 +27,12 @@ function formatDuration(minutes) {
 function formatDistance(km) {
   if (km == null) return "";
   return `${Number(km).toFixed(1)} km`;
+}
+// Safe numeric coercion for analytics — never sends NaN to Amplitude.
+function toNullableNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
 }
 // quest_stops rows are one flat, ordered list with a stop_type of
 // "start" | "checkpoint" | "viewpoint" — split that into the
@@ -47,12 +57,15 @@ function normalizeQuestDetail(api) {
     longDescription: api.overview,
     difficulty: api.difficulty,
     duration: formatDuration(api.duration_min),
+    durationMin: toNullableNumber(api.duration_min),
     distance: formatDistance(api.distance_km),
+    distanceKm: toNullableNumber(api.distance_km),
     accessibility: api.accessibility,
     image: api.image_url,
     isDaily: Boolean(api.is_daily),
     lat: Number(api.latitude),
     lng: Number(api.longitude),
+    tags: api.tags ?? [],
     route: buildRoute(api.stops),
     safety: (api.accessibility_notes ?? []).map((n) => ({ title: n.title, text: n.text })),
     badge: api.badge
@@ -64,7 +77,8 @@ function normalizeQuestDetail(api) {
 // The backend doesn't return gallery photos yet — this is visual supporting
 // content only, keyed by quest id, using the images already placed in
 // frontend/public/assets. Core quest content (title/description/etc.) still
-// comes entirely from the API above.
+// comes entirely from the API above. `name` is translated via discoverKeyMap
+// (see i18n/labelKeys.js) since it's presentational-only, not DB content.
 const discoverImagesByQuestId = {
   "greenwich-stroll": [
     { name: "Cutty Sark", image: "/assets/GreenwichCuttySurk.png" },
@@ -124,25 +138,27 @@ const badgeImageOverrides = {
 
 // The API only returns title/text for accessibility notes, no icon — pick a
 // sensible one from the note's title, falling back to a generic checkmark.
+// Matches against the English DB title regardless of active language, since
+// quest_accessibility_notes.title (not the translated version) is stable.
 function getSafetyIcon(title) {
-  const t = title.toLowerCase();
-  if (t.includes("step-free") || t.includes("paved") || t.includes("flat")) return accessibilityIcon;
-  if (t.includes("rest stop")) return "/assets/StopsIcon.png";
-  if (t.includes("busy") || t.includes("aware") || t.includes("uphill")) return "/assets/UphillIcon.png";
+  const lower = title.toLowerCase();
+  if (lower.includes("step-free") || lower.includes("paved") || lower.includes("flat")) return accessibilityIcon;
+  if (lower.includes("rest stop")) return "/assets/StopsIcon.png";
+  if (lower.includes("busy") || lower.includes("aware") || lower.includes("uphill")) return "/assets/UphillIcon.png";
   return null; // → generic checkmark
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function BackArrowIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <path d="M19 12H5M5 12l7-7M5 12l7 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function HeartIcon({ filled }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? "white" : "none"}>
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill={filled ? "white" : "none"}>
       <path
         d="M20.8 4.6c-2-1.8-5-1.5-6.8.5L12 7.3 10 5.1c-1.8-2-4.9-2.3-6.8-.5-2.2 2-2.3 5.4-.2 7.5l9 8.3 9-8.3c2.1-2.1 2-5.5-.2-7.5Z"
         stroke="white"
@@ -154,7 +170,7 @@ function HeartIcon({ filled }) {
 }
 function FlagIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5 w-5 md:h-4.5 md:w-4.5" viewBox="0 0 24 24" fill="none">
       <path d="M5 21V4" stroke="#15A963" strokeWidth="2" strokeLinecap="round" />
       <path d="M5 5c2-1.5 4-1.5 6 0s4 1.5 6 0v9c-2 1.5-4 1.5-6 0s-4-1.5-6 0V5Z" stroke="#15A963" strokeWidth="2" strokeLinejoin="round" />
     </svg>
@@ -162,14 +178,14 @@ function FlagIcon() {
 }
 function CheckIcon({ size = 18 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={Math.round(size * 1.08)} height={Math.round(size * 1.08)} viewBox="0 0 24 24" fill="none">
       <path d="M5 13l4 4L19 7" stroke="#15A963" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 function LockIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+    <svg className="h-3.5 w-3.5 md:h-3.25 md:w-3.25" viewBox="0 0 24 24" fill="none">
       <rect x="5" y="11" width="14" height="9" rx="2" stroke="#6F6A62" strokeWidth="2" />
       <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="#6F6A62" strokeWidth="2" strokeLinecap="round" />
     </svg>
@@ -177,7 +193,7 @@ function LockIcon() {
 }
 function WeatherIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <circle cx="9" cy="9" r="3.5" stroke="#15A963" strokeWidth="1.8" />
       <path
         d="M12.5 17h5a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.6-1.4"
@@ -193,11 +209,11 @@ function WeatherIcon() {
 // ── Stat box (Distance / Time / Difficulty / Accessibility) ──────────────────
 function StatBox({ icon, label, value }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_4px_16px_rgba(47,47,47,0.06)]">
-      <img src={icon} alt="" className="h-9 w-9 shrink-0" />
+    <div className="flex items-center gap-3 rounded-2xl bg-white p-4.5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] md:p-4">
+      <img src={icon} alt="" className="h-9.5 w-9.5 shrink-0 md:h-9 md:w-9" />
       <div>
-        <p className="text-[13px] text-[#8A857D]">{label}</p>
-        <p className="text-[16px] font-bold text-[#2F2F2F]">{value}</p>
+        <p className="text-[14px] text-[#8A857D] md:text-[13px]">{label}</p>
+        <p className="text-[17px] font-bold text-[#2F2F2F] md:text-[16px]">{value}</p>
       </div>
     </div>
   );
@@ -207,10 +223,10 @@ function StatBox({ icon, label, value }) {
 function TimelineRow({ marker, kicker, label, last }) {
   return (
     <div className={["relative flex gap-4", last ? "" : "pb-6"].join(" ")}>
-      <div className="z-10 flex h-11 w-11 shrink-0 items-center justify-center">{marker}</div>
+      <div className="z-10 flex h-11.75 w-11.75 shrink-0 items-center justify-center md:h-11 md:w-11">{marker}</div>
       <div className="pt-2">
-        <p className="text-[13px] text-[#8A857D]">{kicker}</p>
-        <p className="text-[15px] font-bold text-[#2F2F2F]">{label}</p>
+        <p className="text-[14px] text-[#8A857D] md:text-[13px]">{kicker}</p>
+        <p className="text-[16px] font-bold text-[#2F2F2F] md:text-[15px]">{label}</p>
       </div>
     </div>
   );
@@ -220,13 +236,33 @@ function TimelineRow({ marker, kicker, label, last }) {
 // tall — the sticky header buttons sit just below it, not below the scroll.
 const HEADER_TOP_OFFSET = 68;
 const SWIPE_THRESHOLD = 50;
+const ACCESSIBILITY_VISIBILITY_THRESHOLD = 0.45;
+
+// Shared property shape for the quest-level analytics events fired from this
+// page (Viewed / Started / Repeated / Saved / Unsaved) — keeps property
+// names consistent without repeating the same object four times.
+function getQuestAnalyticsProperties(quest, extra) {
+  return {
+    quest_id: quest.id,
+    quest_name: quest.title,
+    location: quest.location,
+    difficulty: quest.difficulty,
+    distance_km: quest.distanceKm,
+    duration_min: quest.durationMin,
+    accessibility: quest.accessibility,
+    source: "Quest Detail",
+    ...extra,
+  };
+}
 
 export default function QuestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { savedMap, toggleSaved } = useContext(SavedContext);
+  const { t, currentLanguage } = useContext(LanguageContext);
   const [activeImg, setActiveImg] = useState(0);
   const pointerStartX = useRef(null);
+  const trackedQuestViewRef = useRef(null);
 
   const [quest, setQuest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -237,7 +273,7 @@ export default function QuestDetail() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/quests/${id}`)
+    fetch(`${API_URL}/api/quests/${id}?lang=${currentLanguage}`)
       .then((res) => {
         if (res.status === 404) {
           if (!cancelled) setNotFound(true);
@@ -261,7 +297,19 @@ export default function QuestDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, retryCount]);
+  }, [id, retryCount, currentLanguage]);
+
+  useEffect(() => {
+    if (!quest) return;
+
+    if (trackedQuestViewRef.current === quest.id) {
+      return;
+    }
+
+    trackedQuestViewRef.current = quest.id;
+
+    trackEvent("Quest Viewed", getQuestAnalyticsProperties(quest, { is_daily: quest.isDaily }));
+  }, [quest]);
 
   // Small weather block, driven by the quest's own coordinates. Never blocks
   // or breaks the page — no key, no coordinates, or a failed request all
@@ -287,7 +335,7 @@ export default function QuestDetail() {
       setWeatherStatus("loading");
 
       fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${quest.lat}&lon=${quest.lng}&appid=${WEATHER_API_KEY}&units=metric`
+        `https://api.openweathermap.org/data/2.5/weather?lat=${quest.lat}&lon=${quest.lng}&appid=${WEATHER_API_KEY}&units=metric&lang=${currentLanguage}`
       )
         .then((res) => {
           if (!res.ok) throw new Error("Weather request failed");
@@ -311,7 +359,7 @@ export default function QuestDetail() {
       clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quest?.lat, quest?.lng]);
+  }, [quest?.lat, quest?.lng, currentLanguage]);
 
   const saved = Boolean(savedMap[id]);
   // Top carousel = the real backend photo first, then the same photos used
@@ -327,6 +375,7 @@ export default function QuestDetail() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedFromApi(null);
 
     fetch(`${API_URL}/api/completed/${id}`)
@@ -347,6 +396,44 @@ export default function QuestDetail() {
     };
   }, [id]);
 
+  // "Accessibility Section Reached" — the section is always rendered further
+  // down the page (when the quest has safety content), so this can't just
+  // fire on load; it needs to fire only once the section is actually
+  // scrolled into view. trackedAccessibilityQuestRef stores the quest id
+  // it already fired for, which both dedupes repeated scrolling within the
+  // same quest and correctly re-arms when the user opens a different quest.
+  const accessibilitySectionRef = useRef(null);
+  const trackedAccessibilityQuestRef = useRef(null);
+
+  useEffect(() => {
+    if (!quest) return;
+    if (typeof IntersectionObserver === "undefined") return; // fail safely
+    const node = accessibilitySectionRef.current;
+    if (!node) return; // no accessibility/safety content rendered for this quest
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        if (trackedAccessibilityQuestRef.current === quest.id) return;
+        trackedAccessibilityQuestRef.current = quest.id;
+
+        trackEvent("Accessibility Section Reached", {
+          quest_id: quest.id,
+          quest_name: quest.title,
+          difficulty: quest.difficulty,
+          accessibility: quest.accessibility,
+          accessibility_notes_count: quest.safety?.length ?? 0,
+          source: "Quest Detail",
+        });
+        observer.disconnect();
+      },
+      { threshold: ACCESSIBILITY_VISIBILITY_THRESHOLD }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [quest]);
+
   const completedQuestIds = getCompletedQuests();
   const isCompleted = completedFromApi !== null ? completedFromApi : completedQuestIds.includes(id);
 
@@ -365,10 +452,27 @@ export default function QuestDetail() {
     }
   }
 
+  function handleStartQuest() {
+    trackEvent(
+      isCompleted ? "Quest Repeated" : "Quest Started",
+      getQuestAnalyticsProperties(quest, { is_daily: quest.isDaily })
+    );
+    navigate(`/quest/${quest.id}/active`);
+  }
+
+  // toggleSaved (SavedContext, see App.jsx) updates state optimistically and
+  // syncs to the backend in the background — it doesn't return a promise, so
+  // there's nothing to await here. The event describes the toggle direction
+  // the user just triggered, mirroring how the heart icon updates instantly.
+  function handleSaveQuest() {
+    trackEvent(saved ? "Quest Unsaved" : "Quest Saved", getQuestAnalyticsProperties(quest));
+    toggleSaved(quest.id);
+  }
+
   if (isLoading) {
     return (
       <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
-        <p>Loading quest…</p>
+        <p>{t("quest.loading", "Loading quest…")}</p>
       </main>
     );
   }
@@ -376,7 +480,7 @@ export default function QuestDetail() {
   if (notFound) {
     return (
       <main className="flex h-full items-center justify-center bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
-        <p>Quest not found.</p>
+        <p>{t("quest.notFound", "Quest not found.")}</p>
       </main>
     );
   }
@@ -384,7 +488,7 @@ export default function QuestDetail() {
   if (error || !quest) {
     return (
       <main className="flex h-full flex-col items-center justify-center gap-3 bg-[#F8F7F4] px-6 text-center text-[#2F2F2F]">
-        <p className="text-[14px] text-[#8A857D]">Couldn't load this quest. {error}</p>
+        <p className="text-[14px] text-[#8A857D]">{t("quest.loadError", "Couldn't load this quest.")} {error}</p>
         <button
           type="button"
           onClick={() => {
@@ -394,7 +498,7 @@ export default function QuestDetail() {
           }}
           className="rounded-full bg-[#15A963] px-5 py-2.5 text-[14px] font-semibold text-white"
         >
-          Try again
+          {t("common.retry", "Try again")}
         </button>
       </main>
     );
@@ -402,7 +506,9 @@ export default function QuestDetail() {
 
   const detail = quest; // same normalized object carries both the "basic" and "extended" fields
 
-  const tags = categoryTagsByQuestId[quest.id] ?? [];
+  // Prefer real tags from the backend; fall back to the frontend-only map
+  // only while a quest doesn't have backend tags yet.
+  const tags = quest.tags?.length > 0 ? quest.tags : categoryTagsByQuestId[quest.id] ?? [];
   const discover = discoverImagesByQuestId[quest.id];
 
   return (
@@ -411,7 +517,7 @@ export default function QuestDetail() {
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
         {/* Hero image carousel */}
         <div
-          className="relative h-96 w-full touch-pan-y overflow-hidden"
+          className="relative h-102.5ull touch-pan-y overflow-hidden md:h-96"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
         >
@@ -430,7 +536,7 @@ export default function QuestDetail() {
                 <button
                   key={i}
                   type="button"
-                  aria-label={`Go to photo ${i + 1}`}
+                  aria-label={`${t("quest.goToPhoto", "Go to photo")} ${i + 1}`}
                   onClick={() => setActiveImg(i)}
                   className={["h-2 w-2 rounded-full transition-colors", i === activeImg ? "bg-white" : "bg-white/40"].join(" ")}
                 />
@@ -439,16 +545,16 @@ export default function QuestDetail() {
           )}
         </div>
 
-        <div className="px-5 pt-5 text-[#2F2F2F]">
-          <h1 className="text-[26px] font-bold leading-tight">{quest.title}</h1>
-          <p className="mt-1.5 text-[15px] text-[#2F2F2F]">{quest.description}</p>
+        <div className="px-5.5 pt-5 text-[#2F2F2F] md:px-5">
+          <h1 className="text-[28px] font-bold leading-tight md:text-[26px]">{quest.title}</h1>
+          <p className="mt-1.5 text-[16px] text-[#2F2F2F] md:text-[15px]">{quest.description}</p>
 
           {tags.length > 0 && (
-            <p className="mt-2 text-[13px] font-medium text-[#6F6A62]">
+            <p className="mt-2 text-[14px] font-medium text-[#6F6A62] md:text-[13px]">
               {tags.map((tag, i) => (
                 <span key={tag}>
                   {i > 0 && <span className="text-[#15A963]"> · </span>}
-                  {tag}
+                  {translateLabel(t, tagKeyMap, tag)}
                 </span>
               ))}
             </p>
@@ -456,25 +562,33 @@ export default function QuestDetail() {
 
           {/* Stats */}
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <StatBox icon={distanceIcon} label="Distance" value={quest.distance} />
-            <StatBox icon={timeIcon} label="Time" value={quest.duration} />
-            <StatBox icon={difficultyIcon} label="Difficulty" value={quest.difficulty} />
-            <StatBox icon={accessibilityIcon} label="Accessibility" value={quest.accessibility} />
+            <StatBox icon={distanceIcon} label={t("quest.distance", "Distance")} value={quest.distance} />
+            <StatBox icon={timeIcon} label={t("quest.duration", "Time")} value={quest.duration} />
+            <StatBox
+              icon={difficultyIcon}
+              label={t("quest.difficulty", "Difficulty")}
+              value={translateLabel(t, difficultyKeyMap, quest.difficulty)}
+            />
+            <StatBox
+              icon={accessibilityIcon}
+              label={t("quest.accessibility", "Accessibility")}
+              value={translateLabel(t, questAccessibilityKeyMap, quest.accessibility)}
+            />
           </div>
 
           {detail?.longDescription && (
-            <p className="mt-5 text-[15px] leading-normal text-[#2F2F2F]">{detail.longDescription}</p>
+            <p className="mt-5 text-[16px] leading-normal text-[#2F2F2F] md:text-[15px]">{detail.longDescription}</p>
           )}
 
           {/* What you'll discover */}
           {discover && discover.length > 0 && (
             <>
-              <h2 className="mt-7 text-[19px] font-bold">What you&apos;ll discover</h2>
+              <h2 className="mt-7 text-[20px] font-bold md:text-[19px]">{t("quest.whatYoullDiscover", "What you'll discover")}</h2>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {discover.map((d) => (
                   <div key={d.name}>
-                    <img src={d.image} alt={d.name} className="h-24 w-full rounded-2xl object-cover" />
-                    <p className="mt-1.5 text-center text-[14px] font-semibold">{d.name}</p>
+                    <img src={d.image} alt={translateLabel(t, discoverKeyMap, d.name)} className="h-26 w-full rounded-2xl object-cover md:h-24" />
+                    <p className="mt-1.5 text-center text-[15px] font-semibold md:text-[14px]">{translateLabel(t, discoverKeyMap, d.name)}</p>
                   </div>
                 ))}
               </div>
@@ -484,73 +598,75 @@ export default function QuestDetail() {
           {/* Route details */}
           {detail?.route && (
             <>
-              <h2 className="mt-7 text-[19px] font-bold">Route details</h2>
+              <h2 className="mt-7 text-[20px] font-bold md:text-[19px]">{t("quest.routeDetails", "Route details")}</h2>
               <div className="relative mt-4">
                 <div className="absolute left-5.25 top-11 bottom-11 w-0.5 bg-[#15A963]" />
                 <TimelineRow
-                  marker={<div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#15A963] bg-white">{<FlagIcon />}</div>}
-                  kicker="Start point"
+                  marker={<div className="flex h-11.75 w-11.75 items-center justify-center rounded-full border-2 border-[#15A963] bg-white md:h-11 md:w-11">{<FlagIcon />}</div>}
+                  kicker={t("quest.startPoint", "Start point")}
                   label={detail.route.start.title}
                 />
                 {detail.route.stops.map((stop, i) => (
                   <TimelineRow
                     key={stop.title}
-                    marker={<span className="h-3 w-3 rounded-full bg-[#15A963]" />}
-                    kicker={`Stop ${i + 1}`}
+                    marker={<span className="h-3.25 w-3.25 rounded-full bg-[#15A963] md:h-3 md:w-3" />}
+                    kicker={`${t("quest.stop", "Stop")} ${i + 1}`}
                     label={stop.title}
                   />
                 ))}
                 <TimelineRow
                   last
-                  marker={<div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#15A963] bg-white">{<CheckIcon />}</div>}
-                  kicker="End point"
+                  marker={<div className="flex h-11.75 w-11.75 items-center justify-center rounded-full border-2 border-[#15A963] bg-white md:h-11 md:w-11">{<CheckIcon />}</div>}
+                  kicker={t("quest.endPoint", "End point")}
                   label={detail.route.end.title}
                 />
               </div>
             </>
           )}
 
-          {/* Accessibility & safety */}
+          {/* Accessibility & safety — ref used only for the "Accessibility
+              Section Reached" IntersectionObserver (see effect above); a
+              plain unstyled div in normal flow, so it doesn't affect layout. */}
           {detail?.safety && detail.safety.length > 0 && (
-            <>
-              <h2 className="mt-7 text-[19px] font-bold">Accessibility &amp; safety</h2>
-              <p className="mt-1 text-[13px] text-[#8A857D]">Important route notes before you start</p>
+            <div ref={accessibilitySectionRef}>
+              <h2 className="mt-7 text-[20px] font-bold md:text-[19px]">{t("quest.accessibilitySafety", "Accessibility & safety")}</h2>
+              <p className="mt-1 text-[14px] text-[#8A857D] md:text-[13px]">{t("quest.accessibilitySafetySubtitle", "Important route notes before you start")}</p>
               <div className="mt-4 space-y-4">
                 {detail.safety.map((item) => {
                   const icon = getSafetyIcon(item.title);
                   return (
                     <div key={item.title} className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#15A963]">
-                        {icon ? <img src={icon} alt="" className="h-5 w-5" /> : <CheckIcon size={18} />}
+                      <div className="flex h-11.75 w-11.75 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[#15A963] md:h-11 md:w-11">
+                        {icon ? <img src={icon} alt="" className="h-5.5 w-5.5 md:h-5 md:w-5" /> : <CheckIcon size={18} />}
                       </div>
                       <div>
-                        <p className="text-[15px] font-bold text-[#2F2F2F]">{item.title}</p>
-                        <p className="mt-0.5 text-[13px] leading-[1.4] text-[#8A857D]">{item.text}</p>
+                        <p className="text-[16px] font-bold text-[#2F2F2F] md:text-[15px]">{item.title}</p>
+                        <p className="mt-0.5 text-[14px] leading-[1.4] text-[#8A857D] md:text-[13px]">{item.text}</p>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </>
+            </div>
           )}
 
           {/* Weather */}
-          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white p-4 shadow-[0_4px_16px_rgba(47,47,47,0.06)]">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E7F5EF]">
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white p-4.5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] md:p-4">
+            <div className="flex h-11.75 w-11.75 shrink-0 items-center justify-center rounded-full bg-[#E7F5EF] md:h-11 md:w-11">
               <WeatherIcon />
             </div>
             <div>
               {weatherStatus === "ready" && weather && Number.isFinite(weather.temp) ? (
                 <>
-                  <p className="text-[15px] font-bold text-[#2F2F2F]">
+                  <p className="text-[16px] font-bold text-[#2F2F2F] md:text-[15px]">
                     {weather.temp}°C{weather.description ? ` · ${weather.description}` : ""}
                   </p>
-                  <p className="text-[13px] text-[#8A857D]">Check the weather before starting this outdoor quest.</p>
+                  <p className="text-[14px] text-[#8A857D] md:text-[13px]">{t("quest.weatherCheck", "Check the weather before starting this outdoor quest.")}</p>
                 </>
               ) : weatherStatus === "loading" ? (
-                <p className="text-[13px] text-[#8A857D]">Loading weather…</p>
+                <p className="text-[14px] text-[#8A857D] md:text-[13px]">{t("quest.weatherLoading", "Loading weather…")}</p>
               ) : (
-                <p className="text-[13px] text-[#8A857D]">Weather information is currently unavailable.</p>
+                <p className="text-[14px] text-[#8A857D] md:text-[13px]">{t("quest.weatherUnavailable", "Weather information is currently unavailable.")}</p>
               )}
             </div>
           </div>
@@ -558,9 +674,9 @@ export default function QuestDetail() {
           {/* Quest reward */}
           {detail?.badge && (
             <>
-              <h2 className="mt-7 text-[19px] font-bold">Quest reward</h2>
-              <div className="mt-3 flex gap-4 rounded-2xl bg-white p-4 shadow-[0_4px_16px_rgba(47,47,47,0.06)]">
-                <div className="flex h-28 w-24 shrink-0 items-center justify-center">
+              <h2 className="mt-7 text-[20px] font-bold md:text-[19px]">{t("quest.questReward", "Quest reward")}</h2>
+              <div className="mt-3 flex gap-4 rounded-2xl bg-white p-4.5 shadow-[0_4px_16px_rgba(47,47,47,0.06)] md:p-4">
+                <div className="flex h-30 w-26 shrink-0 items-center justify-center md:h-28 md:w-24">
                   <img
                     src={isCompleted ? (badgeImageOverrides[quest.id] ?? detail.badge.image) : LOCKED_BADGE_IMAGE}
                     alt={detail.badge.name}
@@ -572,15 +688,15 @@ export default function QuestDetail() {
                   />
                 </div>
                 <div className="flex flex-col justify-center">
-                  <p className="text-[15px] font-bold text-[#2F2F2F]">{detail.badge.name}</p>
-                  <p className="mt-1 text-[13px] leading-[1.4] text-[#8A857D]">{detail.badge.desc}</p>
+                  <p className="text-[16px] font-bold text-[#2F2F2F] md:text-[15px]">{detail.badge.name}</p>
+                  <p className="mt-1 text-[14px] leading-[1.4] text-[#8A857D] md:text-[13px]">{detail.badge.desc}</p>
                   {isCompleted ? (
-                    <span className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-[#E7F5EF] px-3 py-1.5 text-[12px] font-medium text-[#15A963]">
-                      <CheckIcon size={13} /> Collected
+                    <span className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-[#E7F5EF] px-3.25 py-1.75 text-[13px] font-medium text-[#15A963] md:px-3 md:py-1.5 md:text-[12px]">
+                      <CheckIcon size={13} /> {t("passport.badges", "Collected")}
                     </span>
                   ) : (
-                    <span className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-[#F0EEE9] px-3 py-1.5 text-[12px] font-medium text-[#6F6A62]">
-                      <LockIcon /> Locked
+                    <span className="mt-2 flex w-fit items-center gap-1.5 rounded-full bg-[#F0EEE9] px-3.25 py-1.75 text-[13px] font-medium text-[#6F6A62] md:px-3 md:py-1.5 md:text-[12px]">
+                      <LockIcon /> {t("passport.locked", "Locked")}
                     </span>
                   )}
                 </div>
@@ -592,23 +708,23 @@ export default function QuestDetail() {
 
       {/* Sticky header buttons — fixed over the top of the screen, independent of scroll */}
       <div
-        className="absolute inset-x-0 z-30 flex items-center justify-between px-5"
+        className="absolute inset-x-0 z-30 flex items-center justify-between px-5.5 md:px-5"
         style={{ top: HEADER_TOP_OFFSET }}
       >
         <button
           type="button"
           onClick={() => navigate(-1)}
-          aria-label="Back"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md"
+          aria-label={t("common.back", "Back")}
+          className="flex h-11.75 w-11.75 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md md:h-11 md:w-11"
         >
           <BackArrowIcon />
         </button>
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => toggleSaved(quest.id)}
-            aria-label="Save quest"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md"
+            onClick={handleSaveQuest}
+            aria-label={saved ? t("quest.unsaveQuest", "Unsave quest") : t("quest.saveQuest", "Save quest")}
+            className="flex h-11.75 w-11.75 items-center justify-center rounded-full border border-white/20 bg-black/30 backdrop-blur-md md:h-11 md:w-11"
           >
             <HeartIcon filled={saved} />
           </button>
@@ -616,19 +732,19 @@ export default function QuestDetail() {
       </div>
 
       {/* Sticky "Start/Repeat quest" button — fixed over the bottom of the screen, independent of scroll */}
-      <div className="absolute inset-x-5 bottom-5 z-30">
+      <div className="absolute inset-x-5.5 bottom-5.5 z-30 md:inset-x-5 md:bottom-5">
         {isCompleted && (
-          <p className="mb-2 rounded-full bg-[#E7F5EF] px-4 py-2 text-center text-[13px] font-medium text-[#15A963] shadow-[0_4px_14px_rgba(47,47,47,0.08)]">
-            Badge already unlocked in your Passport.
+          <p className="mb-2 rounded-full bg-[#E7F5EF] px-4.5 py-2.25 text-center text-[14px] font-medium text-[#15A963] shadow-[0_4px_14px_rgba(47,47,47,0.08)] md:px-4 md:py-2 md:text-[13px]">
+            {t("quest.badgeUnlockedNotice", "Badge already unlocked in your Passport.")}
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => navigate(`/quest/${quest.id}/active`)}
-          className="flex h-14 w-full items-center justify-center rounded-full bg-[#15A963] text-[16px] font-bold text-white shadow-[0_8px_24px_rgba(21,169,99,0.35)]"
-        >
-          {isCompleted ? "Repeat quest" : "Start quest"}
-        </button>
+       <button
+        type="button"
+        onClick={handleStartQuest}
+        className="flex h-15 w-full items-center justify-center rounded-full bg-[#15A963] text-[17px] font-bold text-white shadow-[0_8px_24px_rgba(21,169,99,0.35)] md:h-14 md:text-[16px]"
+>
+        {isCompleted ? t("quest.repeatQuest", "Repeat quest") : t("quest.startQuest", "Start quest")}
+       </button>
       </div>
     </main>
   );

@@ -5,17 +5,23 @@ const pool = require("../db/connection");
 // MVP has a single demo user — no login/auth yet.
 const DEMO_USER_ID = 1;
 
+function normalizeLang(lang) {
+  return lang === "uk" ? "uk" : "en";
+}
+
 // GET /api/saved — all quests the demo user has saved, newest first
 router.get("/", async (req, res) => {
+  const lang = normalizeLang(req.query.lang);
+
   try {
     const [rows] = await pool.query(
       `
       SELECT
         q.id,
-        q.title,
-        q.location,
-        q.description,
-        q.overview,
+        COALESCE(qt.title, q.title) AS title,
+        COALESCE(qt.location, q.location) AS location,
+        COALESCE(qt.short_description, q.description) AS description,
+        COALESCE(qt.full_description, q.overview) AS overview,
         q.difficulty,
         q.duration_min,
         q.distance_km,
@@ -27,10 +33,11 @@ router.get("/", async (req, res) => {
         sq.saved_at
       FROM saved_quests sq
       JOIN quests q ON q.id = sq.quest_id
+      LEFT JOIN quest_translations qt ON qt.quest_id = q.id AND qt.language_code = ?
       WHERE sq.user_id = ?
       ORDER BY sq.saved_at DESC
       `,
-      [DEMO_USER_ID]
+      [lang, DEMO_USER_ID]
     );
 
     res.json(rows);

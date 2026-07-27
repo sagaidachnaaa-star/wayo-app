@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { LanguageContext } from "../context/LanguageContext";
 
 // Fallback used when geolocation is unavailable or denied.
 const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
@@ -10,7 +11,7 @@ const DEFAULT_LOCATION = { lat: 51.4826, lng: -0.0077 }; // Greenwich, London
 // Icons
 function LocateFabIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <svg className="h-5.5 w-5.5 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none">
       <path d="M12 2L19 21L12 17L5 21L12 2Z" stroke="#15A963" strokeWidth="2" strokeLinejoin="round" />
     </svg>
   );
@@ -46,6 +47,7 @@ const QUEST_PIN_ICON = questPinIcon();
 // truth for the quest list instead of two parallel UIs.
 export default function QuestMapView({ quests, active }) {
   const navigate = useNavigate();
+  const { t } = useContext(LanguageContext);
   const mapRef = useRef(null);
   const requested = useRef(false);
 
@@ -109,8 +111,8 @@ export default function QuestMapView({ quests, active }) {
       <button
         type="button"
         onClick={centerOnMe}
-        className="absolute bottom-4 left-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-[0_4px_16px_rgba(47,47,47,0.18)]"
-        aria-label="Center on my location"
+        className="absolute bottom-4 left-4 z-20 flex h-11.75 w-11.75 items-center justify-center rounded-full bg-white shadow-[0_4px_16px_rgba(47,47,47,0.18)] md:h-11 md:w-11"
+        aria-label={t("common.centerOnMyLocation", "Center on my location")}
       >
         <LocateFabIcon />
       </button>

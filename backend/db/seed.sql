@@ -7,6 +7,8 @@ TRUNCATE TABLE saved_quests;
 TRUNCATE TABLE badges;
 TRUNCATE TABLE quest_accessibility_notes;
 TRUNCATE TABLE quest_stops;
+TRUNCATE TABLE quest_tags;
+TRUNCATE TABLE tags;
 TRUNCATE TABLE quests;
 TRUNCATE TABLE users;
 
@@ -188,3 +190,48 @@ INSERT INTO saved_quests (user_id, quest_id) VALUES
 INSERT INTO completed_quests (user_id, quest_id) VALUES
 (1, 'greenwich-stroll'),
 (1, 'green-escape-city');
+
+-- 8. Tags (Activity/Features tags used on Quest Detail and by Explore filters)
+
+INSERT INTO tags (name, type) VALUES
+('Walking', 'activity'),
+('Riverside', 'feature'),
+('Parks & Gardens', 'feature'),
+('Hidden history', 'feature'),
+('Garden', 'feature'),
+('Peaceful', 'feature'),
+('Nature', 'feature'),
+('History', 'feature'),
+('Landmarks', 'feature'),
+('Hidden spots', 'feature'),
+('Independent places', 'feature'),
+('Royal park', 'feature'),
+('Relaxed', 'feature');
+
+-- 9. Quest tags (links each quest to its tags)
+
+INSERT INTO quest_tags (quest_id, tag_id) VALUES
+('greenwich-stroll', (SELECT id FROM tags WHERE name = 'Walking')),
+('greenwich-stroll', (SELECT id FROM tags WHERE name = 'Riverside')),
+('greenwich-stroll', (SELECT id FROM tags WHERE name = 'Parks & Gardens')),
+('greenwich-stroll', (SELECT id FROM tags WHERE name = 'Hidden history')),
+
+('kyoto-garden-escape', (SELECT id FROM tags WHERE name = 'Walking')),
+('kyoto-garden-escape', (SELECT id FROM tags WHERE name = 'Garden')),
+('kyoto-garden-escape', (SELECT id FROM tags WHERE name = 'Peaceful')),
+('kyoto-garden-escape', (SELECT id FROM tags WHERE name = 'Nature')),
+
+('thames-time-trail', (SELECT id FROM tags WHERE name = 'Walking')),
+('thames-time-trail', (SELECT id FROM tags WHERE name = 'Riverside')),
+('thames-time-trail', (SELECT id FROM tags WHERE name = 'History')),
+('thames-time-trail', (SELECT id FROM tags WHERE name = 'Landmarks')),
+
+('quiet-corners-southbank', (SELECT id FROM tags WHERE name = 'Walking')),
+('quiet-corners-southbank', (SELECT id FROM tags WHERE name = 'Hidden spots')),
+('quiet-corners-southbank', (SELECT id FROM tags WHERE name = 'Riverside')),
+('quiet-corners-southbank', (SELECT id FROM tags WHERE name = 'Independent places')),
+
+('green-escape-city', (SELECT id FROM tags WHERE name = 'Walking')),
+('green-escape-city', (SELECT id FROM tags WHERE name = 'Parks & Gardens')),
+('green-escape-city', (SELECT id FROM tags WHERE name = 'Royal park')),
+('green-escape-city', (SELECT id FROM tags WHERE name = 'Relaxed'));
