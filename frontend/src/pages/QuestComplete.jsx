@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { quests } from "../data/quests";
 import { questDetails } from "../data/questDetails";
 import { saveCompletedQuest } from "../utils/questProgress";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { LanguageContext } from "../context/LanguageContext";
 
 // Real per-quest badge art in public/assets — same mapping Passport uses,
@@ -28,7 +28,7 @@ export default function QuestComplete() {
     // real source of truth for Passport, not this localStorage entry.
     saveCompletedQuest(quest.id);
 
-    fetch(`${API_URL}/api/completed/${quest.id}`, { method: "POST" }).catch(() => {
+    fetch(`${API_BASE_URL}/api/completed/${quest.id}`, { method: "POST" }).catch(() => {
       console.error("Failed to sync quest completion with the backend");
     });
   }, [quest]);

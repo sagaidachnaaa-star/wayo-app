@@ -3,7 +3,7 @@ import QuestCard from "../components/QuestCard";
 import QuestMapView from "../components/QuestMapView";
 import { getCompletedQuests } from "../utils/questProgress";
 import { haversineDistanceKm } from "../utils/geo";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { LanguageContext } from "../context/LanguageContext";
 import {
   activityKeyMap,
@@ -510,7 +510,7 @@ export default function Explore() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/quests?lang=${currentLanguage}`)
+    fetch(`${API_BASE_URL}/api/quests?lang=${currentLanguage}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();

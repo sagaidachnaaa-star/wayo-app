@@ -4,7 +4,7 @@ import QuestCard from "../components/QuestCard";
 import { SavedContext } from "../context/SavedContext";
 import { LanguageContext } from "../context/LanguageContext";
 import { sortKeyMap, translateLabel } from "../i18n/labelKeys";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 
 // ── Backend response → the flat shape QuestCard expects ─────────────────────
 function formatDuration(minutes) {
@@ -106,7 +106,7 @@ export default function Saved() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/saved?lang=${currentLanguage}`)
+    fetch(`${API_BASE_URL}/api/saved?lang=${currentLanguage}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();

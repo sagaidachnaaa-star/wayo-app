@@ -10,10 +10,12 @@
 // the backend runs on a different host/port than the frontend.
 const DEV_API_PORT = 5050;
 
-function resolveApiUrl() {
+function resolveApiBaseUrl() {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (import.meta.env.DEV) return `http://${window.location.hostname}:${DEV_API_PORT}`;
   return "http://localhost:5050";
 }
 
-export const API_URL = resolveApiUrl();
+// Strip any trailing slash so callers can safely do `${API_BASE_URL}/api/...`
+// without risking a double slash.
+export const API_BASE_URL = resolveApiBaseUrl().replace(/\/$/, "");

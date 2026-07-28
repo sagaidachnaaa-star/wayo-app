@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LanguageContext } from "./LanguageContext";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 
 // MVP has a single demo user — no login/auth yet (see backend/routes/users.js).
 const DEMO_USER_ID = 1;
@@ -39,7 +39,7 @@ export default function LanguageProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/users/${DEMO_USER_ID}`)
+    fetch(`${API_BASE_URL}/api/users/${DEMO_USER_ID}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || appliedUserLanguage.current) return;
@@ -61,7 +61,7 @@ export default function LanguageProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/languages`)
+    fetch(`${API_BASE_URL}/api/languages`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (cancelled || !Array.isArray(data) || data.length === 0) return;
@@ -84,7 +84,7 @@ export default function LanguageProvider({ children }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
 
-    fetch(`${API_URL}/api/translations/${currentLanguage}`)
+    fetch(`${API_BASE_URL}/api/translations/${currentLanguage}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
@@ -145,7 +145,7 @@ export default function LanguageProvider({ children }) {
     // from this state change.
     setCurrentLanguage(languageCode);
 
-    fetch(`${API_URL}/api/users/${DEMO_USER_ID}/language`, {
+    fetch(`${API_BASE_URL}/api/users/${DEMO_USER_ID}/language`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ languageCode }),

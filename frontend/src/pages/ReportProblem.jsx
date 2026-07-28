@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router";
 import BackButton from "../components/BackButton";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { LanguageContext } from "../context/LanguageContext";
 import { reportReasonKeyMap, translateLabel } from "../i18n/labelKeys";
 
@@ -21,7 +21,7 @@ export default function ReportProblem() {
     setIsSubmitting(true);
     setError(null);
 
-    fetch(`${API_URL}/api/reports`, {
+    fetch(`${API_BASE_URL}/api/reports`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ issue_type: reason, details }),

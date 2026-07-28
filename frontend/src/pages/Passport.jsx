@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { questDetails } from "../data/questDetails";
 import lockedBadge from "../assets/Locked.png";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { LanguageContext } from "../context/LanguageContext";
 
 // Real per-quest colour badge art already placed in public/assets — same
@@ -67,11 +67,11 @@ export default function Passport() {
     let cancelled = false;
 
     Promise.all([
-      fetch(`${API_URL}/api/quests?lang=${currentLanguage}`).then((res) => {
+      fetch(`${API_BASE_URL}/api/quests?lang=${currentLanguage}`).then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
       }),
-      fetch(`${API_URL}/api/completed?lang=${currentLanguage}`).then((res) => {
+      fetch(`${API_BASE_URL}/api/completed?lang=${currentLanguage}`).then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();
       }),

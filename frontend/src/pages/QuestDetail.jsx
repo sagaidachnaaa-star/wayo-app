@@ -4,7 +4,7 @@ import { SavedContext } from "../context/SavedContext";
 import { LanguageContext } from "../context/LanguageContext";
 import { difficultyKeyMap, discoverKeyMap, questAccessibilityKeyMap, tagKeyMap, translateLabel } from "../i18n/labelKeys";
 import { getCompletedQuests } from "../utils/questProgress";
-import { API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { trackEvent } from "../analytics/amplitude";
 
 
@@ -273,7 +273,7 @@ export default function QuestDetail() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/quests/${id}?lang=${currentLanguage}`)
+    fetch(`${API_BASE_URL}/api/quests/${id}?lang=${currentLanguage}`)
       .then((res) => {
         if (res.status === 404) {
           if (!cancelled) setNotFound(true);
@@ -378,7 +378,7 @@ export default function QuestDetail() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCompletedFromApi(null);
 
-    fetch(`${API_URL}/api/completed/${id}`)
+    fetch(`${API_BASE_URL}/api/completed/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         return res.json();

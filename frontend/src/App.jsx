@@ -5,7 +5,7 @@ import Toast from "./components/Toast";
 import { SplashOverlayContext } from "./context/SplashContext";
 import { SavedContext } from "./context/SavedContext";
 import { LanguageContext } from "./context/LanguageContext";
-import { API_URL } from "./config/api";
+import { API_BASE_URL } from "./config/api";
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Explore from "./pages/Explore";
@@ -144,7 +144,7 @@ function App() {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(`${API_URL}/api/saved`)
+    fetch(`${API_BASE_URL}/api/saved`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (cancelled) return;
@@ -180,7 +180,7 @@ function App() {
     // Optimistic UI update above already happened — persist to the backend
     // in the background. On success, confirm with a toast; on failure, roll
     // the optimistic update back and tell the user instead of failing silently.
-    fetch(`${API_URL}/api/saved/${id}`, { method: wasSaved ? "DELETE" : "POST" })
+    fetch(`${API_BASE_URL}/api/saved/${id}`, { method: wasSaved ? "DELETE" : "POST" })
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed (${res.status})`);
         setToast({
