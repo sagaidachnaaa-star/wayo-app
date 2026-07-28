@@ -13,4 +13,12 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
+// Belt-and-braces alongside the `charset` option above: guarantee every
+// pooled connection's session explicitly matches the tables' actual
+// charset/collation, regardless of what a given MySQL server negotiates
+// by default for a bare connection.
+pool.on("connection", (connection) => {
+  connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+});
+
 module.exports = pool; 
