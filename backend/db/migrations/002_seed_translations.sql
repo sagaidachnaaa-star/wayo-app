@@ -1,6 +1,9 @@
 -- Seed data: English + Ukrainian interface translations for every screen.
-
-USE railway;
+--
+-- Runs against whichever database the connection already has selected
+-- (DATABASE_URL / MYSQLDATABASE / DB_NAME) — e.g. `wayo_db` locally or
+-- `railway` on Railway. Select that schema before running this file
+-- instead of relying on a hardcoded USE statement here.
 
 INSERT INTO translations (translation_key, language_code, content) VALUES
   -- Bottom navigation
@@ -294,7 +297,7 @@ INSERT INTO translations (translation_key, language_code, content) VALUES
   ('notification.saved',     'uk', 'Додано до збереженого'),
   ('notification.removed',   'en', 'Removed from saved'),
   ('notification.removed',   'uk', 'Видалено зі збереженого'),
-  ('notification.saveError', 'en', "Couldn''t save — please try again"),
+  ('notification.saveError', 'en', "Couldn't save — please try again"),
   ('notification.saveError', 'uk', 'Не вдалося зберегти — спробуйте ще раз'),
 
   -- Saved page
@@ -625,4 +628,5 @@ INSERT INTO translations (translation_key, language_code, content) VALUES
   ('questComplete.exploreMore',    'en', 'Explore more quests'),
   ('questComplete.exploreMore',    'uk', 'Дослідити інші квести')
 
-ON DUPLICATE KEY UPDATE content = VALUES(content);
+AS new_translation
+ON DUPLICATE KEY UPDATE content = new_translation.content;

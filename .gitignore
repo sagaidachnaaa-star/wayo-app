@@ -30,6 +30,7 @@ backend/node_modules/
 .env
 .env.local
 .env.production
+.env.railway
 backend/.env
 backend/.env.railway
 frontend/.env

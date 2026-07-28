@@ -1,4 +1,7 @@
-USE railway;
+-- Runs against whichever database the connection already has selected
+-- (DATABASE_URL / MYSQLDATABASE / DB_NAME) — e.g. `wayo_db` locally or
+-- `railway` on Railway. Select that schema before running this file
+-- instead of relying on a hardcoded USE statement here.
 
 -- ── Quests ──────────────────────────────────────────────────────────────────
 INSERT INTO quest_translations (quest_id, language_code, title, location, short_description, full_description) VALUES
@@ -32,11 +35,12 @@ INSERT INTO quest_translations (quest_id, language_code, title, location, short_
   'Коротка зелена втеча одним із наймальовничіших королівських парків Лондона.',
   'Сент-Джеймський парк пропонує одні з найкращих панорам Лондона, обрамлені озером і його мешканцями-пеліканами. Ця легка петля проходить повз Duck Island Cottage і класичні листівкові краєвиди на Букінгемський палац, що робить її одним із найлегших і найприємніших коротких квестів WAYO.'
 )
+AS new_quest
 ON DUPLICATE KEY UPDATE
-  title = VALUES(title),
-  location = VALUES(location),
-  short_description = VALUES(short_description),
-  full_description = VALUES(full_description);
+  title = new_quest.title,
+  location = new_quest.location,
+  short_description = new_quest.short_description,
+  full_description = new_quest.full_description;
 
 -- ── Quest stops ───────────────────────────────────────────────────────────
 -- IDs match the live quest_stops table (SELECT id, quest_id, title FROM quest_stops).
@@ -64,34 +68,32 @@ INSERT INTO quest_stop_translations (quest_stop_id, language_code, title) VALUES
   (21, 'uk', 'Оглядовий місток на озері'),
   (22, 'uk', 'Duck Island Cottage'),
   (23, 'uk', 'Краєвид на Букінгемський палац')
-ON DUPLICATE KEY UPDATE title = VALUES(title);
+AS new_stop
+ON DUPLICATE KEY UPDATE title = new_stop.title;
 
 -- ── Accessibility notes ─────────────────────────────────────────────────────
--- IDs match the live quest_accessibility_notes table.
+-- IDs match the live quest_accessibility_notes table: 3 notes per quest, 15
+-- total (id 1-3 greenwich-stroll, 4-6 kyoto-garden-escape, 7-9 thames-time-trail,
+-- 10-12 quiet-corners-southbank, 13-15 green-escape-city — confirmed against
+-- Railway via `SELECT id, quest_id, title FROM quest_accessibility_notes`).
 INSERT INTO accessibility_note_translations (accessibility_note_id, language_code, title, content) VALUES
-  (1,  'uk', 'Без сходинок', 'Маршрут проходить асфальтованими доріжками з пологими схилами, підходить для візків і колясок.'),
+  (1,  'uk', 'Без сходинок', 'Маршрут проходить переважно асфальтованими доріжками з пологими схилами.'),
   (2,  'uk', 'Місця для відпочинку поруч', 'Лавки є в Гринвіцькому парку та вздовж набережної.'),
-  (3,  'uk', 'Громадський транспорт поруч', 'Станція DLR «Кутті Сарк» розташована на початку маршруту, поруч також станція National Rail «Гринвіч».'),
-  (4,  'uk', 'Будьте уважні на переходах', 'Будьте обережні, переходячи Romney Road і King William Walk — тут може бути жвавий рух.'),
-  (5,  'uk', 'Відвідуйте у світлий час доби', 'Гринвіцький парк зачиняється у сутінках, тож плануйте маршрут на світлу частину дня.'),
-  (6,  'uk', 'Без сходинок', 'Доріжки в Голланд-парку та саду Кіото рівні й доглянуті.'),
-  (7,  'uk', 'Місця для відпочинку поруч', 'Лавки розташовані по всьому саду, особливо біля ставка з коропами кої.'),
-  (8,  'uk', 'Громадський транспорт поруч', 'Станції метро Holland Park і Kensington High Street — за кілька хвилин пішки.'),
-  (9,  'uk', 'Відвідуйте у світлий час доби', 'Сад Кіото може бути людним — ранкові чи вечірні відвідини спокійніші.'),
-  (10, 'uk', 'Переважно рівна місцевість', 'Маршрут проходить Thames Path з незначними підйомами біля мостів.'),
-  (11, 'uk', 'Будьте уважні на переходах', 'Tower Bridge Road і підхід до Лондонського мосту можуть бути жвавими через транспорт і велосипедистів.'),
-  (12, 'uk', 'Громадський транспорт поруч', 'Станції London Bridge і Tower Hill розташовані на обох кінцях маршруту.'),
-  (13, 'uk', 'Місця для відпочинку поруч', 'У Potters Fields Park і на ринку Borough Market є місця, щоб присісти й відпочити.'),
-  (14, 'uk', 'Відвідуйте у світлий час доби', 'Деякі ділянки біля мостів стають тихішими після настання темряви, тож радимо відвідувати вдень.'),
-  (15, 'uk', 'Без сходинок', 'Маршрут проходить рівними асфальтованими доріжками вздовж річки та через сади Bernie Spain.'),
-  (16, 'uk', 'Місця для відпочинку поруч', 'У Gabriel''s Wharf і садах Bernie Spain є лавки та зони для відпочинку.'),
-  (17, 'uk', 'Громадський транспорт поруч', 'Станції Waterloo і Southwark — на невеликій відстані пішки.'),
-  (18, 'uk', 'Будьте уважні на переходах', 'Будьте обережні, переходячи Upper Ground — тут проїжджає місцевий транспорт.'),
-  (19, 'uk', 'Без сходинок', 'Доріжки Сент-Джеймського парку рівні, асфальтовані та повністю доступні для візків.'),
-  (20, 'uk', 'Місця для відпочинку поруч', 'Лавки розташовані вздовж озера, а біля Duck Island Cottage є кафе.'),
-  (21, 'uk', 'Громадський транспорт поруч', 'Станції метро St James''s Park і Green Park розташовані неподалік.'),
-  (22, 'uk', 'Відвідуйте у світлий час доби', 'Ворота парку зачиняються у сутінках, тож плануйте візит відповідно.')
-ON DUPLICATE KEY UPDATE title = VALUES(title), content = VALUES(content);
+  (3,  'uk', 'Громадський транспорт поруч', 'Станція DLR «Кутті Сарк» розташована неподалік від початку маршруту.'),
+  (4,  'uk', 'Без сходинок', 'Доріжки навколо Голланд-парку та саду Кіото переважно рівні й доглянуті.'),
+  (5,  'uk', 'Місця для відпочинку поруч', 'Лавки розташовані по всьому саду та біля ставка.'),
+  (6,  'uk', 'Громадський транспорт поруч', 'Станції метро Holland Park і Kensington High Street — за кілька хвилин пішки.'),
+  (7,  'uk', 'Переважно рівна місцевість', 'Маршрут проходить переважно рівними доріжками вздовж річки.'),
+  (8,  'uk', 'Жваві ділянки', 'Біля Тауерського та Лондонського мостів може бути людно, особливо у вихідні.'),
+  (9,  'uk', 'Громадський транспорт поруч', 'Станції London Bridge і Tower Hill розташовані на обох кінцях маршруту.'),
+  (10, 'uk', 'Без сходинок', 'Маршрут проходить рівними асфальтованими доріжками та шляхами вздовж річки.'),
+  (11, 'uk', 'Місця для відпочинку поруч', 'У Gabriel''s Wharf і садах Bernie Spain є лавки та зони для відпочинку.'),
+  (12, 'uk', 'Громадський транспорт поруч', 'Станції Waterloo і Southwark — на невеликій відстані пішки.'),
+  (13, 'uk', 'Без сходинок', 'Доріжки в Сент-Джеймському парку переважно рівні й асфальтовані.'),
+  (14, 'uk', 'Місця для відпочинку поруч', 'Навколо озера є лавки.'),
+  (15, 'uk', 'Громадський транспорт поруч', 'Станції метро St James''s Park і Green Park розташовані неподалік.')
+AS new_note
+ON DUPLICATE KEY UPDATE title = new_note.title, content = new_note.content;
 
 -- ── Badges ──────────────────────────────────────────────────────────────────
 -- IDs match the live badges table.
@@ -101,4 +103,5 @@ INSERT INTO badge_translations (badge_id, language_code, title, description) VAL
   (3, 'uk', 'Мандрівник у часі', 'Нагорода за проходження століть історії вздовж Темзи від Тауерського мосту до Лондонського мосту.'),
   (4, 'uk', 'Мандрівник Саутбанком', 'Нагорода за відкриття тихих куточків, схованих за жвавою набережною Саутбанку.'),
   (5, 'uk', 'Шукач міської зелені', 'Нагорода за проходження спокійної петлі Сент-Джеймським парком.')
-ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description);
+AS new_badge
+ON DUPLICATE KEY UPDATE title = new_badge.title, description = new_badge.description;

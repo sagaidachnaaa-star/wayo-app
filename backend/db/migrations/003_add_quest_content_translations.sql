@@ -1,4 +1,7 @@
-USE railway;
+-- Runs against whichever database the connection already has selected
+-- (DATABASE_URL / MYSQLDATABASE / DB_NAME) — e.g. `wayo_db` locally or
+-- `railway` on Railway. Select that schema before running this file
+-- instead of relying on a hardcoded USE statement here.
 
 -- Quest title / short description (quests.description) / full overview
 -- (quests.overview) / location label.
