@@ -517,7 +517,7 @@ export default function QuestDetail() {
       <div className="h-full overflow-y-auto pb-32 [&::-webkit-scrollbar]:hidden">
         {/* Hero image carousel */}
         <div
-          className="relative h-102.5ull touch-pan-y overflow-hidden md:h-96"
+          className="relative h-[clamp(430px,56dvh,620px)] touch-pan-y overflow-hidden md:h-96"
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
         >
@@ -526,12 +526,19 @@ export default function QuestDetail() {
             style={{ transform: `translateX(-${activeImg * 100}%)` }}
           >
             {heroImages.map((src, i) => (
-              <img key={i} src={src} alt={quest.title} draggable={false} className="h-full w-full shrink-0 object-cover" />
+              <img
+                key={i}
+                src={src}
+                alt={quest.title}
+                draggable={false}
+                decoding="async"
+                className="block h-full w-full shrink-0 object-cover object-center"
+              />
             ))}
           </div>
 
           {heroImages.length > 1 && (
-            <div className="absolute inset-x-0 bottom-4 flex justify-center gap-1.5">
+            <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center gap-1.5">
               {heroImages.map((_, i) => (
                 <button
                   key={i}
