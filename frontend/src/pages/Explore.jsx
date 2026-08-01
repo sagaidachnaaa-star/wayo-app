@@ -873,7 +873,7 @@ export default function Explore() {
           same visual position, just contained to the mockup like everything
           else on this page. Only shown while the sheet fully covers the map. */}
       {mapButtonVisible && (
-        <div className="fixed md:absolute left-1/2 z-40 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom)+16px)] md:bottom-[12px]">
+        <div className="fixed md:absolute left-1/2 z-40 -translate-x-1/2 bottom-[calc(96px+env(safe-area-inset-bottom)+16px)] md:bottom-3">
           <button
             type="button"
             onClick={openMap}
