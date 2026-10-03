@@ -84,14 +84,14 @@ export default function LocationPermissions() {
             </div>
           </div>
 
-          <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
+          <p className="mt-5 text-[15px] leading-normal text-[#2F2F2F]">
             {t(
               "location.grantedBody1",
               "WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are. We never share your location with third parties, and it's only accessed while the app is open."
             )}
           </p>
 
-          <p className="mt-4 text-[15px] leading-[1.5] text-[#2F2F2F]">
+          <p className="mt-4 text-[15px] leading-normal text-[#2F2F2F]">
             {t("location.grantedBody2", "You can change this at any time from your device's system settings.")}
           </p>
         </>
@@ -109,14 +109,14 @@ export default function LocationPermissions() {
             </div>
           </div>
 
-          <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
+          <p className="mt-5 text-[15px] leading-normal text-[#2F2F2F]">
             {t(
               "location.deniedBody1",
               "You can still use WAYO without location — just search for a place or pick a quest manually from Explore."
             )}
           </p>
 
-          <p className="mt-4 text-[15px] leading-[1.5] text-[#2F2F2F]">
+          <p className="mt-4 text-[15px] leading-normal text-[#2F2F2F]">
             {t("location.deniedBody2", "You can turn location back on at any time from your browser or device settings.")}
           </p>
 
@@ -140,7 +140,7 @@ export default function LocationPermissions() {
 
       {status === "prompt" && (
         <>
-          <p className="mt-5 text-[15px] leading-[1.5] text-[#2F2F2F]">
+          <p className="mt-5 text-[15px] leading-normal text-[#2F2F2F]">
             {t(
               "location.promptBody",
               "WAYO uses your location to show nearby quests, measure distance and duration accurately, and centre the map on where you are. We never share your location with third parties."
