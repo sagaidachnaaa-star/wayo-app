@@ -21,6 +21,8 @@ KAN-XX-task ──► develop ──► (tested, stable release) ──► main 
 
 Unfinished work is never merged directly into `main`.
 
+For V1 feature boundaries and launch scope, see [V1_SCOPE.md](V1_SCOPE.md).
+
 ---
 
 ## 1. Branch roles

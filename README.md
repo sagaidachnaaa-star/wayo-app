@@ -257,6 +257,8 @@ npm run lint
 
 ## Current MVP Limitations
 
+> These limitations describe the MSc version. The scope of the first public London release (V1) is defined in [`docs/V1_SCOPE.md`](docs/V1_SCOPE.md).
+
 WAYO is an MSc MVP rather than a finished commercial application.
 
 The current version:
